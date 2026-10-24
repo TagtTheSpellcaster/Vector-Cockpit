@@ -9,11 +9,6 @@ A wireframe flight simulator in a single HTML file, with a cockpit view and anal
 ![Build step](https://img.shields.io/badge/build%20step-none-lightgrey)
 ![Runs in the browser](https://img.shields.io/badge/runs%20in-the%20browser-blue?logo=googlechrome&logoColor=white)
 ![Touch controls](https://img.shields.io/badge/touch-supported-A77BFF)
-![World](https://img.shields.io/badge/world-60%20%C3%97%2060%20km-FF8A2B)
-
-![Last commit](https://img.shields.io/github/last-commit/TagtTheSpellcaster/Vector-Cockpit/)
-![Stars](https://img.shields.io/github/stars/TagtTheSpellcaster/Vector-Cockpit/?style=flat)
-![Repo size](https://img.shields.io/github/repo-size/TagtTheSpellcaster/Vector-Cockpit/)
 
 Playable here: https://tagtthespellcaster.github.io/Vector-Cockpit/
 
