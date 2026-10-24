@@ -6,9 +6,9 @@ A wireframe flight simulator in a single HTML file, with a cockpit view and anal
 ![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-F7DF1E?logo=javascript&logoColor=black)
 ![Canvas 2D](https://img.shields.io/badge/rendering-Canvas%202D-4DB8FF)
 ![Dependencies](https://img.shields.io/badge/dependencies-none-46F07A)
-![Build step](https://img.shields.io/badge/build%20step-none-lightgrey)
 ![Runs in the browser](https://img.shields.io/badge/runs%20in-the%20browser-blue?logo=googlechrome&logoColor=white)
 ![Touch controls](https://img.shields.io/badge/touch-supported-A77BFF)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 Playable here: [Vector Cockpit](https://tagtthespellcaster.github.io/Vector-Cockpit/)
 
