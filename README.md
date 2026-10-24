@@ -10,7 +10,7 @@ A wireframe flight simulator in a single HTML file, with a cockpit view and anal
 ![Runs in the browser](https://img.shields.io/badge/runs%20in-the%20browser-blue?logo=googlechrome&logoColor=white)
 ![Touch controls](https://img.shields.io/badge/touch-supported-A77BFF)
 
-Playable here: ![Vector Cockpit](https://tagtthespellcaster.github.io/Vector-Cockpit/)
+Playable here: [Vector Cockpit](https://tagtthespellcaster.github.io/Vector-Cockpit/)
 
 There is no score and no mission. You take off, fly, and land. The only outcome the program records is a crash, with its cause.
 
