@@ -1,0 +1,1147 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Vector Cockpit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=VT323&display=swap">
+<style>
+:root{
+  /* Layout: schermo cockpit 16:10 al centro, letture numeriche sotto, comandi touch e tasti a seguire.
+     Look volutamente single-theme: monitor vettoriale con i colori del vecchio hi-res (bianco, verde, viola, arancio, blu). */
+  --ink:#07090C; --panel:#161A20; --bezel:#2A3039; --edge:#3A424D;
+  --line:#E9ECEF; --muted:#8C96A3;
+  --green:#46F07A; --violet:#A77BFF; --orange:#FF8A2B; --blue:#4DB8FF; --red:#FF5252;
+  --display:'VT323',ui-monospace,'Courier New',monospace;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ink);color:var(--line);font:14px/1.5 var(--mono);margin:0;
+  padding-block:16px 28px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));}
+.wrap{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 16px}
+h1{font:400 30px/1 var(--display);letter-spacing:.04em;margin:0;text-transform:uppercase;text-wrap:balance}
+.top p{margin:0;color:var(--muted);font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.screen{border:2px solid var(--edge);background:#000;line-height:0}
+#cv{display:block;width:100%;height:auto;aspect-ratio:960/600;touch-action:none;image-rendering:auto}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:8px;margin:0}
+.strip div{background:var(--panel);border:1px solid var(--edge);padding:8px 10px;min-width:0}
+.strip dt{font:400 16px/1 var(--display);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.strip dd{margin:2px 0 0;font-size:18px;font-weight:500;font-variant-numeric:tabular-nums;color:var(--green)}
+.strip dd.warn{color:var(--orange)}
+.deck{display:flex;flex-wrap:wrap;gap:14px 18px;align-items:stretch}
+.pad{position:relative;flex:0 0 150px;height:150px;border:1px solid var(--edge);background:var(--panel);touch-action:none;cursor:crosshair;
+  background-image:linear-gradient(var(--edge) 1px,transparent 1px),linear-gradient(90deg,var(--edge) 1px,transparent 1px);background-size:50% 50%;background-position:center}
+.pad small{position:absolute;left:8px;bottom:4px;font:400 16px/1 var(--display);color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+.knob{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border:2px solid var(--green);border-radius:50%;pointer-events:none}
+.ctl{flex:1 1 260px;min-width:0;display:flex;flex-direction:column;gap:10px}
+.thr{display:flex;align-items:center;gap:10px}
+.thr label{font:400 18px/1 var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);flex:0 0 auto}
+.thr input{flex:1 1 auto;min-width:0;accent-color:var(--orange);height:28px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+button{font:400 18px/1 var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--line);background:var(--panel);border:1px solid var(--edge);padding:9px 13px;min-height:40px;cursor:pointer;touch-action:manipulation}
+button:hover{border-color:var(--muted)}
+button[aria-pressed="true"]{border-color:var(--orange);color:var(--orange)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.keys{border:1px solid var(--edge);background:var(--panel)}
+.keys summary{padding:10px 14px;cursor:pointer;font:400 20px/1 var(--display);letter-spacing:.08em;text-transform:uppercase}
+.keys ul{list-style:none;margin:0;padding:4px 14px 14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:6px 24px;font-size:13px}
+.keys li{display:flex;gap:10px;min-width:0}
+.keys kbd{flex:0 0 92px;font:500 12px/1.6 var(--mono);color:var(--green);white-space:nowrap}
+.keys li span{min-width:0;color:var(--line)}
+.note{margin:0;padding:0 14px 14px;color:var(--muted);font-size:12px}
+@media (max-width:520px){h1{font-size:26px}.pad{flex-basis:100%;height:170px}}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+<main class="wrap">
+  <header class="top">
+    <h1>Vector Cockpit</h1>
+    <p>Light single-engine · 4 airfields · 60 × 60 km</p>
+  </header>
+
+  <div class="screen"><canvas id="cv" width="960" height="600" aria-label="Cockpit view with flight instruments"></canvas></div>
+
+  <dl class="strip" id="strip" aria-live="off">
+    <div><dt>Airspeed</dt><dd id="r-ias">0 kt</dd></div>
+    <div><dt>Altitude</dt><dd id="r-alt">0 ft</dd></div>
+    <div><dt>Heading</dt><dd id="r-hdg">360°</dd></div>
+    <div><dt>Vertical</dt><dd id="r-vs">0 fpm</dd></div>
+    <div><dt>Throttle</dt><dd id="r-thr">0 %</dd></div>
+    <div><dt>Flaps</dt><dd id="r-flp">0°</dd></div>
+    <div><dt>Fuel</dt><dd id="r-fuel">100 %</dd></div>
+  </dl>
+
+  <section class="deck" aria-label="Controls">
+    <div class="pad" id="pad" aria-label="Control stick: drag for roll and pitch"><span class="knob" id="knob"></span><small>Stick</small></div>
+    <div class="ctl">
+      <div class="thr"><label for="thr">Throttle</label><input id="thr" type="range" min="0" max="100" value="0"></div>
+      <div class="btns">
+        <button id="b-rl" type="button">◀ Rudder</button>
+        <button id="b-rr" type="button">Rudder ▶</button>
+        <button id="b-brk" type="button" aria-pressed="false">Brakes</button>
+        <button id="b-flp" type="button">Flaps</button>
+        <button id="b-view" type="button">View</button>
+        <button id="b-map" type="button" aria-pressed="false">Map</button>
+        <button id="b-nav" type="button">Field</button>
+        <button id="b-pause" type="button" aria-pressed="false">Pause</button>
+        <button id="b-air" type="button">Airborne</button>
+        <button id="b-reset" type="button">Restart</button>
+        <button id="b-snd" type="button" aria-pressed="false">Sound</button>
+      </div>
+    </div>
+  </section>
+
+  <details class="keys" open>
+    <summary>Keyboard controls</summary>
+    <ul>
+      <li><kbd>← →</kbd><span>Roll (ailerons)</span></li>
+      <li><kbd>↑ ↓</kbd><span>Pitch: ↓ pulls up, ↑ pushes down</span></li>
+      <li><kbd>Z X</kbd><span>Rudder, nosewheel steering on the ground</span></li>
+      <li><kbd>W S</kbd><span>Throttle up / down (also PageUp, PageDown)</span></li>
+      <li><kbd>B</kbd><span>Brakes (hold)</span></li>
+      <li><kbd>F</kbd><span>Flaps 0 / 10 / 20 / 30 degrees</span></li>
+      <li><kbd>V</kbd><span>View: front, left, right, rear, tower, map</span></li>
+      <li><kbd>, .</kbd><span>Map zoom (at the widest scale the map shows the whole region)</span></li>
+      <li><kbd>P</kbd><span>Pause</span></li>
+      <li><kbd>N</kbd><span>Select field: bearing marker and distance point to it; R and H restart there</span></li>
+      <li><kbd>R · H</kbd><span>Restart on the selected field's runway · restart airborne at 1500 ft over it</span></li>
+      <li><kbd>M</kbd><span>Toggle between the map and the previous view</span></li>
+      <li><kbd>O</kbd><span>Sound on / off</span></li>
+    </ul>
+    <p class="note">Takeoff: full throttle, then at about 60 kt pull back gently and ease off once airborne. The flight model is simplified: pitch commands angle of attack and throttle commands climb. Below 48 kt with flaps at zero the wing stalls. Four fields are marked on the map (V). Monteverde 36, Castelrocca 27 and Lagobello 04 have an ILS: it tunes itself to the aligned runway and the dial title shows the field and runway. Valdoro is a grass strip with no ILS. The violet marker on the heading card points to the selected field.</p>
+  </details>
+</main>
+
+<script>
+'use strict';
+/* ---------- costanti e vettori ---------- */
+const D2R = Math.PI / 180, FT = 3.28084, KT = 1.94384, FPM = 196.85, G = 9.81;
+const EYE = 2.2, MASS = 1000, WING = 17.2, TMAX = 3200;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const V3 = {
+  add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
+  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  mul: (a, k) => [a[0] * k, a[1] * k, a[2] * k],
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  len: a => Math.hypot(a[0], a[1], a[2]),
+  norm(a) { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; }
+};
+function mulberry(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const rnd = mulberry(1982);
+
+/* ---------- campi di volo (x = est, z = nord, hdg = prua della pista, estremo 1) ---------- */
+const FIELDS = [
+  { code: 'MV', name: 'Monteverde', x: 0, z: 0, hdg: 0, hl: 800, hw: 15, surf: 'paved', fac: 'full', ils: 0 },
+  { code: 'CR', name: 'Castelrocca', x: -19000, z: 15000, hdg: 90, hl: 600, hw: 12, surf: 'paved', fac: 'medium', ils: 1 },
+  { code: 'LB', name: 'Lagobello', x: 20000, z: -17000, hdg: 40, hl: 700, hw: 15, surf: 'paved', fac: 'medium', ils: 0 },
+  { code: 'VD', name: 'Valdoro', x: 12000, z: 21500, hdg: 330, hl: 450, hw: 9, surf: 'grass', fac: 'small', ils: -1 }
+];
+const RWY_ENDS = [];
+const rwyLabel = h => { let n = Math.round((((h % 360) + 360) % 360) / 10); if (n === 0) n = 36; return String(n).padStart(2, '0'); };
+FIELDS.forEach(f => {
+  const h = f.hdg * D2R;
+  f.rot = h; f.fwd = [Math.sin(h), Math.cos(h)]; f.right = [Math.cos(h), -Math.sin(h)];
+  f.T = (lx, lz) => [f.x + lx * f.right[0] + lz * f.fwd[0], f.z + lx * f.right[1] + lz * f.fwd[1]];
+  f.ends = [
+    { field: f, label: rwyLabel(f.hdg), ils: f.ils === 0, thr: f.T(0, -f.hl), fwd: f.fwd, right: f.right },
+    { field: f, label: rwyLabel(f.hdg + 180), ils: f.ils === 1, thr: f.T(0, f.hl), fwd: [-f.fwd[0], -f.fwd[1]], right: [-f.right[0], -f.right[1]] }
+  ];
+  RWY_ENDS.push(f.ends[0], f.ends[1]);
+});
+let navIdx = 0;                              // campo scelto: rotta, distanza, e punto di ripartenza
+
+/* ---------- ambiente ---------- */
+const MOUNTAINS = [
+  { x: -3600, z: 5600, a: 1500, h: 1150 }, { x: -1700, z: 6600, a: 1000, h: 820 },
+  { x: 3300, z: 5900, a: 1700, h: 1300 }, { x: 5600, z: 600, a: 1800, h: 1500 },
+  { x: -5600, z: -900, a: 1500, h: 900 }, { x: 4500, z: -7500, a: 1400, h: 700 },
+  // cornice e massicci lontani
+  { x: -10000, z: 26000, a: 1800, h: 1500 }, { x: -3000, z: 24500, a: 1400, h: 1100 }, { x: 3500, z: 27500, a: 2000, h: 1700 },
+  { x: 25500, z: 8000, a: 2200, h: 1900 }, { x: 27000, z: -4000, a: 1500, h: 1200 }, { x: 8500, z: -27000, a: 1700, h: 1100 },
+  { x: -24000, z: -6000, a: 1800, h: 1300 }, { x: -27000, z: 6000, a: 1600, h: 1000 }, { x: -12000, z: -24000, a: 2000, h: 1500 },
+  { x: -3000, z: -27500, a: 1500, h: 900 }, { x: -13500, z: 4500, a: 1100, h: 700 }, { x: 8500, z: 8500, a: 1200, h: 800 },
+  { x: -8000, z: 11500, a: 1000, h: 600 }, { x: 18500, z: 10000, a: 1100, h: 900 }, { x: 6500, z: 24500, a: 1000, h: 900 },
+  { x: 17500, z: 24500, a: 1300, h: 1100 }, { x: 27000, z: 22000, a: 1800, h: 1400 }, { x: -26500, z: 24500, a: 1500, h: 1100 },
+  { x: 14500, z: -5500, a: 1000, h: 700 }, { x: 27500, z: -24500, a: 1600, h: 1000 }
+];
+const LAKES = [
+  { x: 2600, z: -2600, rx: 750, rz: 480 }, { x: 18162, z: -15457, rx: 1200, rz: 800 }, { x: -17000, z: 9000, rx: 900, rz: 600 }
+];
+const RIVERS = [
+  [[-4200, 3000], [-2600, 2700], [-1200, 2250], [0, 2350], [1300, 1900], [2800, 2300], [4200, 1700]],
+  [[-29000, -9000], [-22000, -11000], [-15000, -8000], [-9000, -10000], [-4000, -14000], [3000, -12500]],
+  [[-30000, 21000], [-25000, 18000], [-21500, 11500], [-17000, 9300]]
+];
+const BOXES = [];
+function box(x, z, w, d, h, y0 = 0, rot = 0, house = false) {
+  const b = { x, z, w, d, h, y0, rot, sn: Math.sin(rot), cs: Math.cos(rot), r: Math.hypot(w, d) / 2, house, layer: null };
+  BOXES.push(b); return b;
+}
+function hitBox(b, x, y, z) {
+  const dx = x - b.x, dz = z - b.z;
+  if (Math.abs(dx) > b.r + 4 || Math.abs(dz) > b.r + 4) return false;
+  const lx = dx * b.cs - dz * b.sn, lz = dx * b.sn + dz * b.cs;
+  return Math.abs(lx) < b.w / 2 + 4 && Math.abs(lz) < b.d / 2 + 4 && y > b.y0 - 2.5 && y < b.y0 + b.h + 2.5;
+}
+
+function terrainH(x, z) {
+  let h = 0;
+  for (const m of MOUNTAINS) {
+    const k = 1 - Math.max(Math.abs(x - m.x), Math.abs(z - m.z)) / m.a;
+    if (k > 0) h = Math.max(h, m.h * k);
+  }
+  return h;
+}
+function distToRiver(x, z) {
+  let best = 1e9;
+  for (const R of RIVERS) for (let i = 0; i < R.length - 1; i++) {
+    const [ax, az] = R[i], [bx, bz] = R[i + 1];
+    const dx = bx - ax, dz = bz - az, t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz), 0, 1);
+    best = Math.min(best, Math.hypot(x - (ax + dx * t), z - (az + dz * t)));
+  }
+  return best;
+}
+function inWater(x, z) {
+  for (const l of LAKES) { const u = (x - l.x) / l.rx, v = (z - l.z) / l.rz; if (u * u + v * v < 1) return true; }
+  return distToRiver(x, z) < 24;
+}
+function surfaceMu(x, z) {
+  for (const f of FIELDS) {
+    const dx = x - f.x, dz = z - f.z;
+    const lx = dx * f.right[0] + dz * f.right[1], lz = dx * f.fwd[0] + dz * f.fwd[1];
+    if (Math.abs(lx) < f.hw + 25 && Math.abs(lz) < f.hl + 30) return f.surf === 'paved' ? 0.025 : 0.06;
+  }
+  return 0.09;
+}
+// campo scelto: distanza e rotta (vera) dalla posizione dell'aereo
+function navInfo(s) {
+  const f = FIELDS[navIdx], dx = f.x - s.p[0], dz = f.z - s.p[2];
+  let b = Math.atan2(dx, dz); if (b < 0) b += 2 * Math.PI;
+  return { f, dist: Math.hypot(dx, dz), brg: b };
+}
+/* ---------- geometria wireframe ---------- */
+const LAY = {};
+function layer(name, col, max) { return LAY[name] = { col, max, s: [] }; }
+const seg = (l, ax, ay, az, bx, by, bz) => l.s.push(ax, ay, az, bx, by, bz);
+function addBox(l, b) {
+  const c = b.cs, s = b.sn, hw = b.w / 2, hd = b.d / 2, y0 = b.y0, y1 = b.y0 + b.h;
+  const P = (lx, lz) => [b.x + lx * c + lz * s, b.z - lx * s + lz * c];
+  const q = [P(-hw, -hd), P(hw, -hd), P(hw, hd), P(-hw, hd)];
+  for (let i = 0; i < 4; i++) {
+    const a = q[i], e = q[(i + 1) % 4];
+    seg(l, a[0], y0, a[1], e[0], y0, e[1]); seg(l, a[0], y1, a[1], e[0], y1, e[1]); seg(l, a[0], y0, a[1], a[0], y1, a[1]);
+  }
+}
+function addPyramid(l, x, z, a, h, rings) {
+  const c = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  for (let i = 0; i < 4; i++) {
+    const p = c[i], q = c[(i + 1) % 4];
+    seg(l, x + p[0] * a, 0, z + p[1] * a, x + q[0] * a, 0, z + q[1] * a);
+    seg(l, x + p[0] * a, 0, z + p[1] * a, x, h, z);
+    for (let k = 1; k <= rings; k++) {
+      const t = k / (rings + 1), s = a * (1 - t), y = h * t;
+      seg(l, x + p[0] * s, y, z + p[1] * s, x + q[0] * s, y, z + q[1] * s);
+    }
+  }
+}
+// segmenti al suolo, spezzati in tratti corti: il filtro di distanza guarda solo gli estremi
+function lseg(l, ax, az, bx, bz, step = 800) {
+  const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, bz - az) / step));
+  for (let i = 0; i < n; i++) seg(l, ax + (bx - ax) * i / n, 0, az + (bz - az) * i / n, ax + (bx - ax) * (i + 1) / n, 0, az + (bz - az) * (i + 1) / n);
+}
+// cifre a sette segmenti stese sul terreno, nel riferimento locale della pista
+const DIG = { 0: 'abcdef', 1: 'bc', 2: 'abged', 3: 'abgcd', 4: 'fgbc', 5: 'afgcd', 6: 'afgedc', 7: 'abc', 8: 'abcdefg', 9: 'abcdfg' };
+const SEGP = { a: [0, 2, 1, 2], b: [1, 2, 1, 1], c: [1, 1, 1, 0], d: [0, 0, 1, 0], e: [0, 1, 0, 0], f: [0, 2, 0, 1], g: [0, 1, 1, 1] };
+function groundText(l, str, f, lx0, lz0, w, dir) {
+  [...str].forEach((ch, i) => {
+    for (const s of DIG[ch]) {
+      const p = SEGP[s], ox = i * w * 1.5;
+      const A = f.T(lx0 + dir * (ox + p[0] * w), lz0 + dir * p[1] * w), B = f.T(lx0 + dir * (ox + p[2] * w), lz0 + dir * p[3] * w);
+      seg(l, A[0], 0.05, A[1], B[0], 0.05, B[1]);
+    }
+  });
+}
+const ls = (l, f, lx1, lz1, lx2, lz2, y = 0.05) => { const a = f.T(lx1, lz1), b = f.T(lx2, lz2); seg(l, a[0], y, a[1], b[0], y, b[1]); };
+function mast(l, x, z, h, s) {
+  for (const [dx, dz] of [[-s, -s], [s, -s], [s, s], [-s, s]]) seg(l, x + dx, 0, z + dz, x, h, z);
+  for (let k = 1; k < 6; k++) {
+    const t = k / 6, w = s * (1 - t), y = h * t;
+    seg(l, x - w, y, z - w, x + w, y, z - w); seg(l, x + w, y, z - w, x + w, y, z + w); seg(l, x + w, y, z + w, x - w, y, z + w); seg(l, x - w, y, z + w, x - w, y, z - w);
+  }
+}
+function village(cx, cz, n, cols, gap) {
+  for (let i = 0; i < n; i++) {
+    const x = cx + (i % cols) * gap + rnd() * 10, z = cz + Math.floor(i / cols) * gap + rnd() * 10;
+    box(x, z, 14 + rnd() * 6, 12 + rnd() * 5, 6 + rnd() * 4, 0, 0, true);
+  }
+}
+function town(cx, cz, n, sp) {
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const x = cx + i * sp + rnd() * 14, z = cz + j * sp + rnd() * 14;
+    const tall = i > 1 && i < n - 1 && j > 1 && j < n - 1;
+    box(x, z, 46 + rnd() * 18, 46 + rnd() * 18, tall ? 70 + rnd() * 130 : 18 + rnd() * 30);
+  }
+}
+
+/* ---------- un campo di volo: pista, segnaletica, aerostazione, faro ---------- */
+function airfield(f) {
+  const run = LAY.run, twy = LAY.twy, org = LAY.org, bcn = LAY.bcn, hl = f.hl, hw = f.hw, paved = f.surf === 'paved';
+  const bx = (lx, lz, w, d, h, y0 = 0) => { const p = f.T(lx, lz); return box(p[0], p[1], w, d, h, y0, f.rot); };
+  if (paved) {
+    ls(run, f, -hw, -hl, hw, -hl); ls(run, f, hw, -hl, hw, hl); ls(run, f, hw, hl, -hw, hl); ls(run, f, -hw, hl, -hw, -hl);
+    for (let lz = -hl + 60; lz < hl - 60; lz += 45) ls(run, f, 0, lz, 0, lz + 22);
+    for (const sgn of [-1, 1]) for (let i = -5; i <= 5; i++) {
+      if (!i) continue;
+      const z0 = sgn * (hl - 8), lx = i * hw * 0.1733;
+      ls(run, f, lx, z0, lx, z0 - sgn * 26);
+    }
+  } else {
+    for (let lz = -hl; lz < hl; lz += 60) { const e = Math.min(lz + 36, hl); ls(run, f, -hw, lz, -hw, e); ls(run, f, hw, lz, hw, e); }
+    ls(run, f, -hw, -hl + 4, hw, -hl + 4); ls(run, f, -hw, hl - 4, hw, hl - 4);
+  }
+  const w = hw >= 15 ? 3.6 : 2.6, off = paved ? 70 : 48;
+  groundText(run, f.ends[0].label, f, -1.1667 * w, -hl + off, w, 1);
+  groundText(run, f.ends[1].label, f, 1.1667 * w, hl - off, w, -1);
+  for (let lz = -hl; lz <= hl; lz += 100) for (const sx of [-1, 1]) {
+    const a = f.T(sx * (hw + 3), lz); seg(org, a[0], 0, a[1], a[0], 1.2, a[1]);
+  }
+  if (f.fac === 'full') {
+    ls(twy, f, hw, -330, 100, -330); ls(twy, f, hw, -306, 100, -306);
+    ls(twy, f, 100, -340, 230, -340); ls(twy, f, 230, -340, 230, -190); ls(twy, f, 230, -190, 100, -190); ls(twy, f, 100, -190, 100, -340);
+    for (let x = 120; x < 230; x += 30) ls(twy, f, x, -318, x + 12, -318);
+    bx(180, -240, 46, 30, 11); bx(180, -290, 46, 30, 11);
+    bx(70, 0, 8, 8, 22); bx(70, 0, 14, 14, 6, 22);
+    bx(170, -60, 90, 26, 12);
+  } else if (f.fac === 'medium') {
+    ls(twy, f, hw, -200, 70, -200); ls(twy, f, hw, -182, 70, -182);
+    ls(twy, f, 70, -225, 150, -225); ls(twy, f, 150, -225, 150, -110); ls(twy, f, 150, -110, 70, -110); ls(twy, f, 70, -110, 70, -225);
+    bx(115, -150, 36, 26, 9); bx(115, -195, 36, 26, 9);
+    bx(45, 0, 6, 6, 14); bx(45, 0, 10, 10, 5, 14);
+    bx(100, -40, 40, 18, 8);
+  } else {
+    bx(40, -90, 22, 16, 7);
+    const p = f.T(30, 0), q = f.T(36, 0);                       // manica a vento
+    seg(org, p[0], 0, p[1], p[0], 8, p[1]); seg(org, p[0], 8, p[1], q[0], 8, q[1]); seg(org, p[0], 6, p[1], q[0], 7.4, q[1]);
+  }
+  // faro: torre alta con croce in cima, visibile da lontano
+  const t = bx(-90, 0, 8, 8, 70); t.layer = 'bcn';
+  const c0 = f.T(-90, 0);
+  for (const [dx, dz] of [[14, 0], [0, 14]]) {
+    const a = f.T(-90 - dx, -dz), b = f.T(-90 + dx, dz);
+    seg(bcn, a[0], 70, a[1], b[0], 70, b[1]);
+  }
+  seg(bcn, c0[0], 70, c0[1], c0[0], 1200, c0[1]);                       // colonna luminosa, visibile da decine di km
+  for (const [dx, dz] of [[40, 0], [0, 40]]) seg(bcn, c0[0] - dx, 1200, c0[1] - dz, c0[0] + dx, 1200, c0[1] + dz);
+}
+
+/* ---------- collegamenti stradali tra i campi (le strade attraversano i fiumi) ---------- */
+const gate = i => { const f = FIELDS[i]; return f.fac === 'medium' ? f.T(110, -165) : f.T(40, -60); };
+const ROADS = [
+  [[170, 500], [-5000, 1500], [-9000, 4000], [-13500, 8000], [-16000, 12500], gate(1)],
+  [[170, -60], [700, -1500], [1200, -3800], [4000, -4800], [6500, -5000], [10500, -9500], [14000, -16500], [17500, -17800], gate(2)],
+  [[170, 500], [500, 6500], [800, 12000], [5000, 16000], [9000, 19500], gate(3)]
+];
+
+function buildWorld() {
+  layer('run', '#E9ECEF', 30000); layer('twy', '#8C96A3', 8000); layer('bld', '#E9ECEF', 12000);
+  layer('city', '#4DB8FF', 26000); layer('wat', '#4DB8FF', 30000); layer('mtn', '#A77BFF', 50000);
+  layer('org', '#FF8A2B', 26000); layer('road', '#8C96A3', 14000); layer('bcn', '#FF8A2B', 48000);
+  const bld = LAY.bld, road = LAY.road, wat = LAY.wat, mtn = LAY.mtn, org = LAY.org;
+
+  airfield(FIELDS[0]);
+  village(-1000, 1450, 16, 4, 46);                 // villaggio a ovest-nord-ovest di Monteverde
+  town(1800, 3000, 6, 120);                        // città a nord-est
+  box(-1200, 2250, 10, 120, 1.5, 5); box(-1200, 2215, 6, 6, 6); box(-1200, 2285, 6, 6, 6);   // ponte
+  for (let i = 1; i < FIELDS.length; i++) airfield(FIELDS[i]);
+  village(-19650, 15750, 20, 5, 44);               // Castelrocca
+  village(21000, -18100, 12, 4, 44);               // Lagobello
+  village(11000, 21200, 6, 3, 40);                 // Valdoro
+  town(-8000, -20000, 5, 130);                     // città a sud-ovest
+
+  for (const b of BOXES) addBox(b.layer ? LAY[b.layer] : (b.h > 60 || b.y0 > 20 ? LAY.city : bld), b);
+  for (const b of BOXES) if (b.house) {
+    seg(bld, b.x - b.w / 2, b.h, b.z, b.x + b.w / 2, b.h, b.z);
+    seg(bld, b.x - b.w / 2, b.h, b.z - b.d / 2, b.x, b.h + 4, b.z); seg(bld, b.x + b.w / 2, b.h, b.z - b.d / 2, b.x, b.h + 4, b.z);
+    seg(bld, b.x - b.w / 2, b.h, b.z + b.d / 2, b.x, b.h + 4, b.z); seg(bld, b.x + b.w / 2, b.h, b.z + b.d / 2, b.x, b.h + 4, b.z);
+  }
+
+  // strade: quelle di Monteverde, poi i collegamenti tra i campi
+  const rd = pts => { for (let k = -1; k <= 1; k += 2) for (let i = 0; i < pts.length - 1; i++) seg(road, pts[i][0] + 4 * k, 0, pts[i][1], pts[i + 1][0] + 4 * k, 0, pts[i + 1][1]); };
+  rd([[170, -60], [170, 500], [-300, 1100], [-1000, 1440]]);
+  rd([[-1200, 1440], [-1200, 2250], [-1200, 3400]]);
+  rd([[1800, 3000], [1000, 1500], [170, 500]]);
+  const road2 = pts => {
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [ax, az] = pts[i], [bx, bz] = pts[i + 1], d = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / d * 4, nz = (bx - ax) / d * 4;
+      lseg(road, ax + nx, az + nz, bx + nx, bz + nz); lseg(road, ax - nx, az - nz, bx - nx, bz - nz);
+    }
+  };
+  for (const r of ROADS) road2(r);
+
+  // fiumi, laghi
+  for (const R of RIVERS) for (let i = 0; i < R.length - 1; i++) {
+    const [ax, az] = R[i], [bx, bz] = R[i + 1], d = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / d * 24, nz = (bx - ax) / d * 24;
+    lseg(wat, ax + nx, az + nz, bx + nx, bz + nz); lseg(wat, ax - nx, az - nz, bx - nx, bz - nz);
+  }
+  for (const l of LAKES) for (const s of [1, 0.62, 0.28]) for (let i = 0; i < 28; i++) {
+    const a = i / 28 * Math.PI * 2, b = (i + 1) / 28 * Math.PI * 2;
+    seg(wat, l.x + Math.cos(a) * l.rx * s, 0, l.z + Math.sin(a) * l.rz * s, l.x + Math.cos(b) * l.rx * s, 0, l.z + Math.sin(b) * l.rz * s);
+  }
+  for (const m of MOUNTAINS) addPyramid(mtn, m.x, m.z, m.a, m.h, 3);
+  // traliccio radio e linea elettrica (solo grafici)
+  mast(org, -500, -1200, 120, 4);
+  for (let x = -2400; x <= 2400; x += 200) {
+    seg(bld, x, 0, 1100, x, 26, 1100); seg(bld, x - 9, 26, 1100, x + 9, 26, 1100);
+    if (x < 2400) { seg(bld, x - 9, 26, 1100, x + 191, 26, 1100); seg(bld, x + 9, 26, 1100, x + 209, 26, 1100); }
+  }
+}
+buildWorld();
+/* ---------- cielo: stelle e luna ---------- */
+const dirOf = (az, el) => [Math.sin(az * D2R) * Math.cos(el * D2R), Math.sin(el * D2R), Math.cos(az * D2R) * Math.cos(el * D2R)];
+const MOON = dirOf(250, 32);
+const STARS = [];
+(function () {
+  const r = mulberry(777);
+  while (STARS.length < 380) {
+    const x = r() * 2 - 1, y = r() * 2 - 1, z = r() * 2 - 1, l = Math.hypot(x, y, z);
+    if (l > 1 || l < 0.1 || y / l < 0.04) continue;                // solo emisfero sopra l'orizzonte
+    const m = r();
+    STARS.push({ d: [x / l, y / l, z / l], a: m < 0.7 ? 0.5 : m < 0.95 ? 0.8 : 1, s: m < 0.7 ? 1.2 : m < 0.95 ? 1.8 : 2.6 });
+  }
+})();
+/* ---------- assetto ---------- */
+const heading = s => { const h = Math.atan2(s.f[0], s.f[2]); return h < 0 ? h + 2 * Math.PI : h; };
+const pitchA = s => Math.asin(clamp(s.f[1], -1, 1));
+const bankA = s => Math.atan2(-s.r[1], s.u[1]);
+const wrapPi = a => { while (a > Math.PI) a -= 2 * Math.PI; while (a < -Math.PI) a += 2 * Math.PI; return a; };
+
+function setAttitude(s, hdg, pit, bank) {
+  const f = [Math.sin(hdg) * Math.cos(pit), Math.sin(pit), Math.cos(hdg) * Math.cos(pit)];
+  const r = V3.norm(V3.cross([0, 1, 0], f)), u = V3.cross(f, r);
+  const c = Math.cos(bank), n = Math.sin(bank);
+  s.f = f; s.r = V3.add(V3.mul(r, c), V3.mul(u, -n)); s.u = V3.add(V3.mul(u, c), V3.mul(r, n));
+}
+function rotPitch(s, a) { const c = Math.cos(a), n = Math.sin(a); const f = V3.add(V3.mul(s.f, c), V3.mul(s.u, n)); s.u = V3.sub(V3.mul(s.u, c), V3.mul(s.f, n)); s.f = f; }
+function rotRoll(s, a) { const c = Math.cos(a), n = Math.sin(a); const r = V3.sub(V3.mul(s.r, c), V3.mul(s.u, n)); s.u = V3.add(V3.mul(s.u, c), V3.mul(s.r, n)); s.r = r; }
+function rotYaw(s, a) { const c = Math.cos(a), n = Math.sin(a); const f = V3.add(V3.mul(s.f, c), V3.mul(s.r, n)); s.r = V3.sub(V3.mul(s.r, c), V3.mul(s.f, n)); s.f = f; }
+function ortho(s) { s.f = V3.norm(s.f); s.r = V3.norm(V3.cross(s.u, s.f)); s.u = V3.cross(s.f, s.r); }
+
+/* ---------- stato ---------- */
+function newState(air, fi = navIdx) {
+  const fl = FIELDS[fi], th0 = fl.ends[0].thr;
+  const s = {
+    p: [th0[0] + fl.fwd[0] * 40, EYE, th0[1] + fl.fwd[1] * 40], v: [0, 0, 0], f: [0, 0, 1], r: [1, 0, 0], u: [0, 1, 0],
+    thr: 0, elev: 0, ail: 0, rud: 0, flaps: 0, brake: false, fuel: 100, rpm: 700,
+    ground: true, crashed: false, msg: '', alpha: 0, stall: false, t: 0,
+    hdgRate: 0, slip: 0, lastHdg: 0, vsi: 0, touch: null, trailT: 0
+  };
+  if (air) {
+    const c = fl.T(0, -700);
+    s.p = [c[0], 460, c[1]]; s.v = [fl.fwd[0] * 41, 0, fl.fwd[1] * 41]; s.thr = 0.42; s.ground = false; s.rpm = 1500;
+    setAttitude(s, fl.rot, 3.5 * D2R, 0);
+  } else setAttitude(s, fl.rot, 0, 0);
+  s.lastHdg = heading(s);
+  return s;
+}
+
+/* ---------- aerodinamica ---------- */
+const rho = alt => 1.225 * Math.exp(-Math.max(alt, 0) / 9000);
+const stallAlpha = fl => (16 - 0.8 * fl) * D2R;
+function liftCoef(a, fl) {
+  const cl0 = 0.25 + 0.13 * fl, as = stallAlpha(fl), an = -12 * D2R;
+  if (a > as) return Math.max(0.75, cl0 + 5 * as - 3.5 * (a - as));
+  if (a < an) return Math.min(-0.3, cl0 + 5 * an + 3.5 * (an - a));
+  return cl0 + 5 * a;
+}
+
+function crash(s, msg) {
+  s.crashed = true; s.msg = msg; s.v = [0, 0, 0]; s.thr = 0; s.stall = false;
+}
+
+function step(s, dt) {
+  if (s.crashed) return;
+  s.t += dt;
+  const V = V3.len(s.v), alt = s.p[1] - EYE, fl = s.flaps;
+  const hasFuel = s.fuel > 0, thr = hasFuel ? s.thr : 0;
+  if (hasFuel) s.fuel = Math.max(0, s.fuel - (0.012 + 0.04 * thr) * dt);
+  const rpmT = hasFuel ? 700 + 2000 * thr : (V > 20 ? 450 : 0);
+  s.rpm += (rpmT - s.rpm) * Math.min(1, dt * 1.5);
+
+  const vf = V3.dot(s.v, s.f), vr = V3.dot(s.v, s.r), vu = V3.dot(s.v, s.u);
+  const alpha = V > 1 ? Math.atan2(-vu, vf) : 0, as = stallAlpha(fl);
+  const beta = Math.atan2(vr, Math.max(Math.abs(vf), 5));
+  s.alpha = alpha; s.slip = beta;
+  s.stall = !s.ground && V > 8 && alpha > as - 0.03;
+
+  const q = 0.5 * rho(alt) * V * V, CL = liftCoef(alpha, fl);
+  let CD = 0.03 + 0.045 * CL * CL + 0.012 * fl;
+  if (Math.abs(alpha) > as) CD += 1.0 * (Math.abs(alpha) - as);
+
+  let F = [0, -MASS * G, 0];
+  if (V > 0.5) {
+    const vh = V3.mul(s.v, 1 / V);
+    const ld = V3.norm(V3.sub(s.u, V3.mul(vh, V3.dot(s.u, vh))));
+    F = V3.add(F, V3.mul(ld, q * WING * CL));
+    F = V3.add(F, V3.mul(vh, -q * WING * CD));
+    F = V3.add(F, V3.mul(s.r, -0.8 * q * WING * beta));
+  }
+  F = V3.add(F, V3.mul(s.f, TMAX * thr * Math.max(0.08, 1 - V / 110) * rho(alt) / 1.225));
+  s.v = V3.add(s.v, V3.mul(F, dt / MASS));
+
+  // comandi: il beccheggio comanda l'angolo di attacco, gli alettoni la velocità di rollio
+  const fc = clamp(V / 28, 0, 1);
+  const trim = (3.5 - 1.2 * fl) * D2R, auth = 14 * D2R;
+  const aCmd = (s.ground ? 0 : trim) + s.elev * auth;
+  let qr = 2.4 * fc * (aCmd - alpha);
+  if (!s.ground && alpha > as) qr -= 1.6 * fc * Math.min((alpha - as) / 0.15, 1);
+  let pr = 1.6 * fc * s.ail + 0.25 * fc * s.rud;
+  if (Math.abs(s.ail) < 0.05) pr -= 0.3 * fc * Math.sin(bankA(s));
+  const yr = fc * (2.0 * beta + 0.45 * s.rud);
+
+  s.p = V3.add(s.p, V3.mul(s.v, dt));
+
+  if (!s.ground) {
+    rotRoll(s, pr * dt); rotPitch(s, qr * dt); rotYaw(s, yr * dt); ortho(s);
+  }
+
+  // suolo
+  const th = terrainH(s.p[0], s.p[2]), floor = th + EYE;
+  if (s.p[1] <= floor) {
+    if (!s.ground) {
+      const sink = -s.v[1], bank = Math.abs(bankA(s)), pit = pitchA(s), hs = Math.hypot(s.v[0], s.v[2]);
+      if (inWater(s.p[0], s.p[2])) return crash(s, 'Ditched in water');
+      if (th > 4) return crash(s, 'Flew into terrain');
+      if (sink > 4.5) return crash(s, 'Hard impact: ' + Math.round(sink * FPM) + ' ft/min');
+      if (bank > 0.42) return crash(s, 'Touched down with a wing low');
+      if (pit < -0.12) return crash(s, 'Nose-first touchdown');
+      if (hs > 75) return crash(s, 'Touchdown too fast');
+      s.touch = { sink: Math.max(0, sink), t: s.t };
+      s.ground = true;
+    }
+    s.p[1] = floor; if (s.v[1] < 0) s.v[1] = 0;
+  } else if (s.ground && s.p[1] > floor + 0.15) s.ground = false;
+
+  if (s.ground) {
+    if (inWater(s.p[0], s.p[2])) return crash(s, 'Ran into the water');
+    let hd = heading(s), p2 = pitchA(s);
+    hd += 0.5 * s.rud * clamp(V / 6, 0, 1) * dt;
+    p2 = clamp(p2 + qr * dt - 0.4 * (1 - fc) * dt, 0, 16 * D2R);
+    setAttitude(s, hd, p2, 0);
+    const h = [Math.sin(hd), 0, Math.cos(hd)];
+    let sp = s.v[0] * h[0] + s.v[2] * h[2];
+    const dec = (surfaceMu(s.p[0], s.p[2]) + (s.brake ? 0.4 : 0)) * G * dt;
+    sp = sp > 0 ? Math.max(0, sp - dec) : Math.min(0, sp + dec);
+    s.v[0] = h[0] * sp; s.v[2] = h[2] * sp;
+  }
+
+  for (const b of BOXES) if (hitBox(b, s.p[0], s.p[1], s.p[2])) return crash(s, 'Collided with a structure');
+
+  // strumenti derivati
+  const hn = heading(s);
+  s.hdgRate += (wrapPi(hn - s.lastHdg) / dt - s.hdgRate) * Math.min(1, dt * 4);
+  s.lastHdg = hn;
+  s.vsi += (s.v[1] - s.vsi) * Math.min(1, dt * 1.5);
+}
+
+/* ---------- ILS: si sintonizza sull'estremo pista con ILS piu' allineato ---------- */
+function ilsData(s) {
+  let best = null;
+  for (const e of RWY_ENDS) {
+    if (!e.ils) continue;
+    const dx = s.p[0] - e.thr[0], dz = s.p[2] - e.thr[1];
+    const along = dx * e.fwd[0] + dz * e.fwd[1], cross = dx * e.right[0] + dz * e.right[1];
+    if (along > -80 || along < -25000) continue;
+    const loc = Math.atan2(cross, -along) / D2R, gs = Math.atan2(s.p[1] - EYE, -along) / D2R;
+    if (Math.abs(loc) > 20 || gs > 12) continue;
+    if (!best || Math.abs(loc) < Math.abs(best.loc)) best = { valid: true, loc, gs, dist: -along, end: e };
+  }
+  return best || { valid: false };
+}
+/* ---------- canvas e colori ---------- */
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const VW = 960, VH = 600, WH = 310, CX = VW / 2, CY = WH / 2, F0 = 520;
+const C = { ink: '#07090C', panel: '#161A20', bezel: '#2A3039', edge: '#3A424D', line: '#E9ECEF', muted: '#8C96A3',
+  green: '#46F07A', dgreen: '#1F8F4A', violet: '#A77BFF', orange: '#FF8A2B', blue: '#4DB8FF', red: '#FF5252' };
+const FONT = 'VT323, "Courier New", monospace';
+const VIEWS = ['FRONT', 'LEFT', 'RIGHT', 'REAR', 'TOWER', 'MAP'];
+let view = 0, lastView = 0, mapRange = 24000, towerZoom = 1;
+
+function fitCanvas() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = Math.round(VW * dpr); cv.height = Math.round(VH * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+/* ---------- proiezione e clipping ---------- */
+const LP = [0, 0, 0, 0], LQ = [0, 0, 0, 0];
+let q1x, q1y, q2x, q2y;
+function clipLine(x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  LP[0] = -dx; LP[1] = dx; LP[2] = -dy; LP[3] = dy;
+  LQ[0] = x1 + 8; LQ[1] = VW + 8 - x1; LQ[2] = y1 + 8; LQ[3] = WH + 8 - y1;
+  let t0 = 0, t1 = 1;
+  for (let i = 0; i < 4; i++) {
+    if (LP[i] === 0) { if (LQ[i] < 0) return false; continue; }
+    const r = LQ[i] / LP[i];
+    if (LP[i] < 0) { if (r > t1) return false; if (r > t0) t0 = r; }
+    else { if (r < t0) return false; if (r < t1) t1 = r; }
+  }
+  q1x = x1 + t0 * dx; q1y = y1 + t0 * dy; q2x = x1 + t1 * dx; q2y = y1 + t1 * dy;
+  return true;
+}
+function segTo(c, ax, ay, az, bx, by, bz) {
+  const p = c.p, r = c.r, u = c.u, f = c.f;
+  let x = ax - p[0], y = ay - p[1], z = az - p[2];
+  let X1 = x * r[0] + y * r[1] + z * r[2], Y1 = x * u[0] + y * u[1] + z * u[2], Z1 = x * f[0] + y * f[1] + z * f[2];
+  x = bx - p[0]; y = by - p[1]; z = bz - p[2];
+  let X2 = x * r[0] + y * r[1] + z * r[2], Y2 = x * u[0] + y * u[1] + z * u[2], Z2 = x * f[0] + y * f[1] + z * f[2];
+  if (Z1 < 1 && Z2 < 1) return;
+  if (Z1 < 1) { const t = (1 - Z1) / (Z2 - Z1); X1 += (X2 - X1) * t; Y1 += (Y2 - Y1) * t; Z1 = 1; }
+  else if (Z2 < 1) { const t = (1 - Z2) / (Z1 - Z2); X2 += (X1 - X2) * t; Y2 += (Y1 - Y2) * t; Z2 = 1; }
+  if (clipLine(CX + X1 / Z1 * c.F, CY - Y1 / Z1 * c.F, CX + X2 / Z2 * c.F, CY - Y2 / Z2 * c.F)) {
+    ctx.moveTo(q1x, q1y); ctx.lineTo(q2x, q2y);
+  }
+}
+function drawLayer(c, l) {
+  ctx.strokeStyle = l.col; ctx.beginPath();
+  const s = l.s, m2 = l.max * l.max, px = c.p[0], pz = c.p[2];
+  for (let i = 0; i < s.length; i += 6) {
+    const da = (s[i] - px) * (s[i] - px) + (s[i + 2] - pz) * (s[i + 2] - pz);
+    const db = (s[i + 3] - px) * (s[i + 3] - px) + (s[i + 5] - pz) * (s[i + 5] - pz);
+    if (da > m2 && db > m2) continue;
+    segTo(c, s[i], s[i + 1], s[i + 2], s[i + 3], s[i + 4], s[i + 5]);
+  }
+  ctx.stroke();
+}
+function drawGrid(c, step, R, col) {
+  ctx.strokeStyle = col; ctx.beginPath();
+  const px = c.p[0], pz = c.p[2];
+  for (let x = Math.floor((px - R) / step) * step; x <= px + R; x += step) segTo(c, x, 0, pz - R, x, 0, pz + R);
+  for (let z = Math.floor((pz - R) / step) * step; z <= pz + R; z += step) segTo(c, px - R, 0, z, px + R, 0, z);
+  ctx.stroke();
+}
+function drawHorizon(c) {
+  ctx.strokeStyle = C.muted; ctx.beginPath();
+  const R = 60000, y = c.p[1], N = 48;
+  let ax = c.p[0] + R, az = c.p[2];
+  for (let i = 1; i <= N; i++) {
+    const a = i / N * Math.PI * 2, bx = c.p[0] + Math.cos(a) * R, bz = c.p[2] + Math.sin(a) * R;
+    segTo(c, ax, y, az, bx, y, bz); ax = bx; az = bz;
+  }
+  ctx.stroke();
+}
+
+/* ---------- modello del velivolo (x destra, y su rispetto all'occhio, z avanti) ---------- */
+const MODEL = [];
+(function () {
+  const m = (a, b) => MODEL.push(a, b);
+  const rect = (z, hw, y0, y1) => [[-hw, y0, z], [hw, y0, z], [hw, y1, z], [-hw, y1, z]];
+  const A = rect(1.5, 0.62, -1.7, -0.1), B = rect(-4.6, 0.14, -1.05, -0.5);
+  for (let i = 0; i < 4; i++) { m(A[i], A[(i + 1) % 4]); m(B[i], B[(i + 1) % 4]); m(A[i], B[i]); m(A[i], [0, -0.9, 3.5]); }
+  for (const s of [-1, 1]) {
+    m([s * 0.62, -0.1, 0.9], [s * 5.7, -0.1, 0.2]); m([s * 5.7, -0.1, 0.2], [s * 5.7, -0.1, -0.9]);
+    m([s * 5.7, -0.1, -0.9], [s * 0.62, -0.1, -1.0]); m([s * 3.2, -0.1, 0.0], [s * 0.6, -1.5, 0.2]);
+    m([s * 0.14, -0.8, -3.9], [s * 1.9, -0.8, -4.5]); m([s * 1.9, -0.8, -4.5], [s * 1.9, -0.8, -5.1]); m([s * 1.9, -0.8, -5.1], [s * 0.14, -0.8, -5.0]);
+    m([s * 1.0, -1.6, 0.6], [s * 1.3, -2.2, 0.7]); m([s * 1.3, -2.2, 0.5], [s * 1.3, -2.2, 0.9]);
+  }
+  m([0, -0.5, -3.9], [0, 0.6, -4.9]); m([0, 0.6, -4.9], [0, 0.6, -5.2]); m([0, 0.6, -5.2], [0, -0.7, -5.2]);
+  m([0, -1.5, 2.2], [0, -2.2, 2.3]); m([0, -0.1, 3.55], [0, -1.7, 3.55]);
+})();
+function drawAircraft(c, s) {
+  ctx.strokeStyle = C.line; ctx.beginPath();
+  const T = q => [s.p[0] + q[0] * s.r[0] + q[1] * s.u[0] + q[2] * s.f[0], s.p[1] + q[0] * s.r[1] + q[1] * s.u[1] + q[2] * s.f[1], s.p[2] + q[0] * s.r[2] + q[1] * s.u[2] + q[2] * s.f[2]];
+  for (let i = 0; i < MODEL.length; i += 2) { const a = T(MODEL[i]), b = T(MODEL[i + 1]); segTo(c, a[0], a[1], a[2], b[0], b[1], b[2]); }
+  ctx.stroke();
+}
+
+/* ---------- cineprese ---------- */
+function cockpitCam(s, v) {
+  let f = s.f, r = s.r, u = s.u;
+  const a = [0, -Math.PI / 2, Math.PI / 2, Math.PI][v];
+  if (a) { const c = Math.cos(a), n = Math.sin(a); const nf = V3.add(V3.mul(f, c), V3.mul(r, n)); r = V3.sub(V3.mul(r, c), V3.mul(f, n)); f = nf; }
+  if (s.stall && !s.ground) { f = V3.norm(V3.add(f, V3.mul(u, (Math.random() - 0.5) * 0.03))); u = V3.cross(f, r); }
+  return { p: s.p, f, r, u, F: F0 };
+}
+const TOWER = [70, 28, 0];
+function towerCam(s) {
+  const f = V3.norm(V3.sub(s.p, TOWER)), r = V3.norm(V3.cross([0, 1, 0], f)), u = V3.cross(f, r);
+  const d = V3.len(V3.sub(s.p, TOWER));
+  towerZoom += (clamp(d / 110, 1, 22) - towerZoom) * 0.08;
+  return { p: TOWER, f, r, u, F: F0 * towerZoom };
+}
+
+/* ---------- cielo ---------- */
+function skyPt(c, d) {
+  const z = d[0] * c.f[0] + d[1] * c.f[1] + d[2] * c.f[2];
+  if (z <= 0.02) return null;
+  return [CX + (d[0] * c.r[0] + d[1] * c.r[1] + d[2] * c.r[2]) / z * c.F, CY - (d[0] * c.u[0] + d[1] * c.u[1] + d[2] * c.u[2]) / z * c.F];
+}
+function drawSky(c) {
+  const R = c.F * 0.032;
+  for (const st of STARS) {
+    const p = skyPt(c, st.d);
+    if (p && p[0] > 0 && p[0] < VW && p[1] > 0 && p[1] < WH) { ctx.globalAlpha = st.a; ctx.fillStyle = '#FFFFFF'; ctx.fillRect(p[0] - st.s / 2, p[1] - st.s / 2, st.s, st.s); }
+  }
+  ctx.globalAlpha = 1;
+  const m = skyPt(c, MOON);
+  if (m) {
+    ctx.strokeStyle = '#D0D7DE'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.arc(m[0], m[1], R, 0, Math.PI * 2);
+    ctx.moveTo(m[0] - R * 0.2 + R * 0.28, m[1] - R * 0.3); ctx.arc(m[0] - R * 0.2, m[1] - R * 0.3, R * 0.28, 0, Math.PI * 2);
+    ctx.moveTo(m[0] + R * 0.35 + R * 0.18, m[1] + R * 0.28); ctx.arc(m[0] + R * 0.35, m[1] + R * 0.28, R * 0.18, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+}
+/* ---------- finestra 3D ---------- */
+function drawFrame(v) {
+  ctx.fillStyle = C.bezel;
+  ctx.fillRect(0, 0, VW, 9);
+  if (v === 0) {
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(70, 0); ctx.lineTo(20, WH); ctx.lineTo(0, WH); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(VW, 0); ctx.lineTo(VW - 70, 0); ctx.lineTo(VW - 20, WH); ctx.lineTo(VW, WH); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = C.edge; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(70, 0); ctx.lineTo(20, WH); ctx.moveTo(VW - 70, 0); ctx.lineTo(VW - 20, WH); ctx.stroke();
+  }
+  ctx.fillStyle = '#0D1014'; ctx.fillRect(0, WH - 9, VW, 9);
+  ctx.fillStyle = C.edge; ctx.fillRect(0, WH - 9, VW, 1); ctx.fillRect(0, 9, VW, 1);
+}
+function drawWorld(s) {
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, VW, WH); ctx.clip();
+  ctx.fillStyle = '#000'; ctx.fillRect(0, 0, VW, WH);
+  const c = view === 4 ? towerCam(s) : cockpitCam(s, view);
+  drawSky(c);
+  ctx.lineWidth = 1.3; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  drawHorizon(c);
+  drawGrid(c, 100, 800, C.dgreen);
+  drawGrid(c, 600, 8000, C.green);
+  for (const k in LAY) drawLayer(c, LAY[k]);
+  if (view === 4) { ctx.lineWidth = 1.6; drawAircraft(c, s); }
+  ctx.restore();
+  if (view < 4) drawFrame(view);
+}
+
+/* ---------- mappa ---------- */
+const trail = [];
+function drawMap(s) {
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, VW, VH); ctx.clip();
+  ctx.fillStyle = '#04070A'; ctx.fillRect(0, 0, VW, VH);
+  const MY = VH / 2, ov = mapRange >= 80000, mx = ov ? 0 : s.p[0], mz = ov ? 0 : s.p[2];
+  const k = VW / mapRange, X = x => CX + (x - mx) * k, Y = z => MY - (z - mz) * k;
+  ctx.lineWidth = 1; ctx.strokeStyle = '#1B222B';
+  const gs = mapRange > 20000 ? 5000 : 1000;
+  ctx.beginPath();
+  for (let x = Math.floor((mx - mapRange / 2) / gs) * gs; x < mx + mapRange / 2; x += gs) { ctx.moveTo(X(x), 0); ctx.lineTo(X(x), VH); }
+  for (let z = Math.floor((mz - mapRange * 0.35) / gs) * gs; z < mz + mapRange * 0.35; z += gs) { ctx.moveTo(0, Y(z)); ctx.lineTo(VW, Y(z)); }
+  ctx.stroke();
+  ctx.strokeStyle = C.violet; ctx.beginPath();
+  for (const m of MOUNTAINS) {
+    for (const t of [1, 0.66, 0.33]) ctx.strokeRect(X(m.x - m.a * t), Y(m.z + m.a * t), 2 * m.a * t * k, 2 * m.a * t * k);
+    for (const [dx, dz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { ctx.moveTo(X(m.x + dx * m.a), Y(m.z + dz * m.a)); ctx.lineTo(X(m.x), Y(m.z)); }
+  }
+  ctx.stroke();
+  ctx.strokeStyle = C.blue; ctx.beginPath();
+  for (const l of LAKES) for (const s2 of [1, 0.6]) { ctx.moveTo(X(l.x) + l.rx * k * s2, Y(l.z)); ctx.ellipse(X(l.x), Y(l.z), l.rx * k * s2, l.rz * k * s2, 0, 0, Math.PI * 2); }
+  for (const R of RIVERS) R.forEach((p, i) => i ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1])));
+  ctx.stroke();
+  ctx.strokeStyle = '#3A424D'; ctx.lineWidth = 1; ctx.beginPath();
+  for (const r of ROADS) r.forEach((p, i) => i ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1])));
+  ctx.stroke();
+  ctx.fillStyle = C.muted;
+  if (mapRange <= 20000) for (const b of BOXES) ctx.fillRect(X(b.x - b.w / 2), Y(b.z + b.d / 2), Math.max(1.5, b.w * k), Math.max(1.5, b.d * k));
+  const nf = FIELDS[navIdx];
+  ctx.setLineDash([6, 6]); ctx.strokeStyle = C.violet; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(X(s.p[0]), Y(s.p[2])); ctx.lineTo(X(nf.x), Y(nf.z)); ctx.stroke(); ctx.setLineDash([]);
+  ctx.font = '18px ' + FONT; ctx.textAlign = 'left';
+  for (const f of FIELDS) {
+    const a = f.T(0, -f.hl), b = f.T(0, f.hl);
+    ctx.strokeStyle = C.line; ctx.lineWidth = Math.max(1.8, f.hw * 2 * k);
+    ctx.beginPath(); ctx.moveTo(X(a[0]), Y(a[1])); ctx.lineTo(X(b[0]), Y(b[1])); ctx.stroke();
+    ctx.strokeStyle = f === nf ? C.orange : C.muted; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(X(f.x), Y(f.z), 9, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = f === nf ? C.orange : C.line;
+    ctx.fillText(f.code + ' ' + f.name + '  ' + f.ends[0].label + '/' + f.ends[1].label, X(f.x) + 14, Y(f.z) - 12);
+  }
+  ctx.lineWidth = 1.2; ctx.strokeStyle = C.orange; ctx.beginPath();
+  trail.forEach((p, i) => i ? ctx.lineTo(X(p[0]), Y(p[1])) : ctx.moveTo(X(p[0]), Y(p[1])));
+  ctx.stroke();
+  ctx.save(); ctx.translate(X(s.p[0]), Y(s.p[2])); ctx.rotate(heading(s));
+  ctx.strokeStyle = C.green; ctx.lineWidth = 2; ctx.beginPath();
+  ctx.moveTo(0, -11); ctx.lineTo(8, 9); ctx.lineTo(0, 5); ctx.lineTo(-8, 9); ctx.closePath(); ctx.stroke();
+  ctx.restore();
+  // barra di letture compatta (il pannello strumenti non e' visibile in mappa)
+  ctx.fillStyle = 'rgba(7,9,12,.85)'; ctx.fillRect(0, VH - 36, VW, 36);
+  ctx.fillStyle = C.edge; ctx.fillRect(0, VH - 36, VW, 1);
+  const nv = navInfo(s), hd = String(Math.round(heading(s) / D2R) % 360 || 360).padStart(3, '0');
+  txt('IAS ' + Math.round(V3.len(s.v) * KT) + ' kt   ALT ' + Math.round((s.p[1] - EYE) * FT) + ' ft   HDG ' + hd + '°', 16, VH - 18, 'left', 20, C.green);
+  txt('NAV ' + nv.f.code + ' ' + String(Math.round(nv.brg / D2R) % 360 || 360).padStart(3, '0') + '° ' + (nv.dist / 1000).toFixed(1) + ' km', 470, VH - 18, 'left', 20, C.violet);
+  txt('scale ' + (mapRange / 1000).toFixed(0) + ' km', VW - 16, VH - 18, 'right', 20, C.muted);
+  txt('N field   , . zoom   V view', VW - 16, 24, 'right', 20, C.muted);
+  ctx.restore();
+}
+/* ---------- primitive 2D ---------- */
+function txt(str, x, y, align, size, col) {
+  ctx.font = size + 'px ' + FONT; ctx.textAlign = align; ctx.textBaseline = 'middle'; ctx.fillStyle = col; ctx.fillText(str, x, y);
+}
+function circ(cx, cy, r, fill, stroke, lw) {
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke(); }
+}
+const pol = (cx, cy, r, a) => [cx + Math.sin(a) * r, cy - Math.cos(a) * r];
+function ln(x1, y1, x2, y2, w, col) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); }
+function tick(cx, cy, r, a, len, w, col) { const p = pol(cx, cy, r, a), q = pol(cx, cy, r - len, a); ln(p[0], p[1], q[0], q[1], w, col); }
+function arcBand(cx, cy, r, a0, a1, w, col) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.arc(cx, cy, r, a0 - Math.PI / 2, a1 - Math.PI / 2); ctx.stroke(); }
+function hand(cx, cy, a, len, tail, w, col) { const p = pol(cx, cy, len, a), q = pol(cx, cy, -tail, a); ln(q[0], q[1], p[0], p[1], w, col); }
+function face(cx, cy, r, title, ty = 0.74) {
+  circ(cx, cy, r + 5, C.bezel, C.edge, 1.5); circ(cx, cy, r, '#090B0E', null);
+  if (title) txt(title, cx, cy + r * ty, 'center', 15, C.muted);
+}
+const lerpA = (v, v0, v1, a0, a1) => (a0 + (clamp(v, v0, v1) - v0) / (v1 - v0) * (a1 - a0)) * D2R;
+
+/* ---------- strumenti ---------- */
+function asi(s, cx, cy, r) {
+  face(cx, cy, r, 'KT');
+  const kt = V3.len(s.v) * KT, A = v => lerpA(v, 0, 160, -140, 140);
+  arcBand(cx, cy, r - 6, A(48), A(110), 4, C.green);
+  arcBand(cx, cy, r - 12, A(40), A(85), 2.5, C.line);
+  arcBand(cx, cy, r - 6, A(110), A(140), 4, C.orange);
+  for (let v = 0; v <= 160; v += 10) tick(cx, cy, r - 2, A(v), v % 20 ? 5 : 9, 1.4, C.line);
+  for (let v = 20; v <= 160; v += 20) { const p = pol(cx, cy, r - 24, A(v)); txt(String(v), p[0], p[1], 'center', 15, C.line); }
+  tick(cx, cy, r - 2, A(140), 12, 2.5, C.red);
+  hand(cx, cy, A(kt), r - 8, 8, 2.4, C.green); circ(cx, cy, 4, C.bezel, C.edge, 1);
+}
+function altimeter(s, cx, cy, r) {
+  face(cx, cy, r, '');
+  const ft = Math.max(0, (s.p[1] - EYE) * FT);
+  for (let i = 0; i < 50; i++) { const a = i / 50 * Math.PI * 2; tick(cx, cy, r - 2, a, i % 5 ? 4 : 9, 1.2, C.line); }
+  for (let i = 0; i < 10; i++) { const p = pol(cx, cy, r - 22, i / 10 * Math.PI * 2); txt(String(i), p[0], p[1], 'center', 17, C.line); }
+  ctx.fillStyle = '#000'; ctx.fillRect(cx - 22, cy + 10, 44, 15);
+  txt(String(Math.round(ft / 10) * 10), cx, cy + 18, 'center', 16, C.green);
+  hand(cx, cy, (ft % 10000) / 10000 * Math.PI * 2, r * 0.5, 4, 3.6, C.line);
+  hand(cx, cy, (ft % 1000) / 1000 * Math.PI * 2, r - 8, 8, 2.2, C.green);
+  circ(cx, cy, 4, C.bezel, C.edge, 1);
+}
+function attitude(s, cx, cy, r) {
+  circ(cx, cy, r + 5, C.bezel, C.edge, 1.5);
+  const pit = pitchA(s) / D2R, bank = bankA(s), ppd = 2.1;
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+  ctx.translate(cx, cy); ctx.rotate(-bank);
+  const off = pit * ppd;
+  ctx.fillStyle = '#10325C'; ctx.fillRect(-r * 2, -r * 3 + off, r * 4, r * 3);
+  ctx.fillStyle = '#4A2F14'; ctx.fillRect(-r * 2, off, r * 4, r * 3);
+  ln(-r * 2, off, r * 2, off, 2, C.line);
+  for (let d = -30; d <= 30; d += 5) {
+    if (!d) continue;
+    const y = off - d * ppd, w = d % 10 ? 14 : 28;
+    ln(-w, y, w, y, 1.4, C.line);
+    if (!(d % 10)) { txt(String(Math.abs(d)), -w - 12, y, 'center', 14, C.line); txt(String(Math.abs(d)), w + 12, y, 'center', 14, C.line); }
+  }
+  ctx.restore();
+  ctx.save(); ctx.translate(cx, cy);
+  for (const d of [-60, -45, -30, -20, -10, 0, 10, 20, 30, 45, 60]) { const a = d * D2R, p = pol(0, 0, r - 1, a), q = pol(0, 0, r - (d % 30 ? 6 : 10), a); ln(p[0], p[1], q[0], q[1], 1.6, C.line); }
+  ctx.save(); ctx.rotate(-bank); ctx.fillStyle = C.orange; ctx.beginPath(); ctx.moveTo(0, -r + 11); ctx.lineTo(-5, -r + 20); ctx.lineTo(5, -r + 20); ctx.closePath(); ctx.fill(); ctx.restore();
+  ctx.strokeStyle = C.orange; ctx.lineWidth = 3; ctx.beginPath();
+  ctx.moveTo(-40, 0); ctx.lineTo(-14, 0); ctx.lineTo(-14, 6); ctx.moveTo(40, 0); ctx.lineTo(14, 0); ctx.lineTo(14, 6); ctx.stroke();
+  ctx.fillStyle = C.orange; ctx.fillRect(-2, -2, 4, 4);
+  ctx.restore();
+}
+function turnCoord(s, cx, cy, r) {
+  face(cx, cy, r, '');
+  const t = clamp(s.hdgRate / D2R / 3, -1.5, 1.5);
+  for (const d of [-1, 0, 1]) tick(cx, cy, r - 2, d * 20 * D2R, 8, 1.6, C.line);
+  txt('L', cx - r + 12, cy - 6, 'center', 16, C.muted); txt('R', cx + r - 12, cy - 6, 'center', 16, C.muted);
+  ctx.save(); ctx.translate(cx, cy - 6); ctx.rotate(t * 20 * D2R);
+  ctx.strokeStyle = C.line; ctx.lineWidth = 3; ctx.beginPath();
+  ctx.moveTo(-40, 0); ctx.lineTo(-8, 0); ctx.moveTo(8, 0); ctx.lineTo(40, 0); ctx.moveTo(0, -10); ctx.lineTo(0, -2); ctx.stroke();
+  circ(0, 0, 5, C.orange); ctx.restore();
+  ctx.strokeStyle = C.edge; ctx.lineWidth = 1.5; ctx.strokeRect(cx - 30, cy + 22, 60, 16);
+  ln(cx - 6, cy + 22, cx - 6, cy + 38, 1, C.edge); ln(cx + 6, cy + 22, cx + 6, cy + 38, 1, C.edge);
+  circ(cx + clamp(s.slip / 0.15, -1, 1) * 22, cy + 30, 6, C.line);
+}
+function gyro(s, cx, cy, r) {
+  circ(cx, cy, r + 5, C.bezel, C.edge, 1.5); circ(cx, cy, r, '#090B0E', null);
+  const h = heading(s);
+  ctx.save(); ctx.translate(cx, cy); ctx.rotate(-h);
+  const lab = { 0: 'N', 90: 'E', 180: 'S', 270: 'W' };
+  for (let d = 0; d < 360; d += 10) {
+    const a = d * D2R, p = pol(0, 0, r - 2, a), q = pol(0, 0, r - (d % 30 ? 5 : 10), a);
+    ln(p[0], p[1], q[0], q[1], d % 30 ? 1.2 : 1.8, C.line);
+    if (d % 30 === 0) {
+      const t = pol(0, 0, r - 19, a);
+      ctx.save(); ctx.translate(t[0], t[1]); ctx.rotate(a);
+      txt(lab[d] || String(d / 10), 0, 0, 'center', lab[d] ? 18 : 13, lab[d] ? C.orange : C.line); ctx.restore();
+    }
+  }
+  tick(0, 0, r + 1, navInfo(s).brg, 15, 4, C.violet);
+  ctx.restore();
+  ctx.fillStyle = C.green; ctx.beginPath(); ctx.moveTo(cx, cy - r + 2); ctx.lineTo(cx - 5, cy - r - 4); ctx.lineTo(cx + 5, cy - r - 4); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = C.line; ctx.lineWidth = 2.5; ctx.beginPath();
+  ctx.moveTo(cx, cy - 18); ctx.lineTo(cx, cy + 16); ctx.moveTo(cx - 17, cy + 2); ctx.lineTo(cx + 17, cy + 2); ctx.moveTo(cx - 6, cy + 14); ctx.lineTo(cx + 6, cy + 14); ctx.stroke();
+}
+function vsi(s, cx, cy, r) {
+  face(cx, cy, r, '');
+  const v = clamp(s.vsi * FPM, -2000, 2000), A = f => (-90 + f / 2000 * 170) * D2R;
+  for (let f = -2000; f <= 2000; f += 250) tick(cx, cy, r - 2, A(f), f % 500 ? 4 : 9, 1.3, C.line);
+  for (const f of [0, 500, 1000, 1500, 2000]) for (const sg of f ? [-1, 1] : [1]) { const p = pol(cx, cy, r - 21, A(f * sg)); txt(String(f / 100), p[0], p[1], 'center', 15, C.line); }
+  txt('FPM', cx - 8, cy + 36, 'center', 14, C.muted);
+  hand(cx, cy, A(v), r - 8, 8, 2.4, C.green); circ(cx, cy, 4, C.bezel, C.edge, 1);
+}
+function rpmGauge(s, cx, cy, r) {
+  face(cx, cy, r, 'RPM x100', 0.8);
+  const A = v => lerpA(v, 0, 3000, -135, 135);
+  arcBand(cx, cy, r - 6, A(1500), A(2500), 4, C.green); arcBand(cx, cy, r - 6, A(2500), A(2700), 4, C.orange);
+  for (let v = 0; v <= 3000; v += 250) tick(cx, cy, r - 2, A(v), v % 500 ? 4 : 9, 1.3, C.line);
+  for (let v = 0; v <= 3000; v += 500) { const p = pol(cx, cy, r - 21, A(v)); txt(String(v / 100), p[0], p[1], 'center', 15, C.line); }
+  tick(cx, cy, r - 2, A(2700), 12, 2.5, C.red);
+  hand(cx, cy, A(s.rpm), r - 8, 8, 2.4, C.green); circ(cx, cy, 4, C.bezel, C.edge, 1);
+}
+function fuelGauge(s, cx, cy, r) {
+  face(cx, cy, r, 'FUEL %');
+  const A = v => lerpA(v, 0, 100, -110, 110);
+  arcBand(cx, cy, r - 6, A(0), A(15), 4, C.red); arcBand(cx, cy, r - 6, A(15), A(100), 4, C.green);
+  for (let v = 0; v <= 100; v += 10) tick(cx, cy, r - 2, A(v), v % 50 ? 4 : 9, 1.3, C.line);
+  for (const v of [0, 50, 100]) { const p = pol(cx, cy, r - 21, A(v)); txt(String(v), p[0], p[1], 'center', 15, C.line); }
+  hand(cx, cy, A(s.fuel), r - 8, 8, 2.4, C.green); circ(cx, cy, 4, C.bezel, C.edge, 1);
+}
+function ilsDial(s, cx, cy, r) {
+  face(cx, cy, r, '');
+  const d = ilsData(s);
+  txt(d.valid ? 'ILS ' + d.end.field.code + ' ' + d.end.label : 'ILS', cx, cy - r + 12, 'center', 16, C.muted);
+  for (const k of [-2, -1, 1, 2]) { circ(cx + k * 18, cy, 2.2, C.line); circ(cx, cy + k * 18, 2.2, C.line); }
+  if (!d.valid) {
+    ctx.fillStyle = C.red; ctx.fillRect(cx - 18, cy - 10, 36, 20); txt('OFF', cx, cy, 'center', 18, C.ink);
+    return;
+  }
+  const nx = clamp(-d.loc / 2.5, -1.15, 1.15) * 36, ny = clamp((d.gs - 3) / 0.7, -1.15, 1.15) * 36;
+  ln(cx + nx, cy - r + 18, cx + nx, cy + r - 18, 2.4, C.violet);
+  ln(cx - r + 18, cy + ny, cx + r - 18, cy + ny, 2.4, C.violet);
+  ln(cx - 8, cy, cx + 8, cy, 1.5, C.orange); ln(cx, cy - 8, cx, cy + 8, 1.5, C.orange);
+  txt((d.dist / 1852).toFixed(1) + ' NM', cx, cy + r - 12, 'center', 16, C.green);
+}
+function leverBar(x, y, w, h, frac, label) {
+  ctx.fillStyle = '#090B0E'; ctx.fillRect(x, y, w, h); ctx.strokeStyle = C.edge; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = C.orange; ctx.fillRect(x + 2, y + h - 2 - (h - 4) * frac, w - 4, (h - 4) * frac);
+  txt(label, x + w / 2, y - 12, 'center', 16, C.muted);
+}
+function flapIndicator(x, y, fl) {
+  txt('FLAPS', x + 12, y - 12, 'center', 16, C.muted);
+  for (let i = 0; i < 4; i++) {
+    const yy = y + i * 30; ctx.fillStyle = i === fl ? C.orange : '#090B0E'; ctx.fillRect(x, yy, 24, 22);
+    ctx.strokeStyle = C.edge; ctx.lineWidth = 1.5; ctx.strokeRect(x, yy, 24, 22);
+    txt(String(i * 10), x + 12, yy + 11, 'center', 16, i === fl ? C.ink : C.line);
+  }
+}
+function lamp(x, y, w, label, on, col) {
+  ctx.fillStyle = on ? col : '#0D1014'; ctx.fillRect(x, y, w, 24); ctx.strokeStyle = C.edge; ctx.lineWidth = 1.5; ctx.strokeRect(x, y, w, 24);
+  txt(label, x + w / 2, y + 12, 'center', 17, on ? C.ink : C.muted);
+}
+
+/* ---------- pannello e sovrapposizioni ---------- */
+function drawPanel(s) {
+  ctx.fillStyle = C.panel; ctx.fillRect(0, WH, VW, VH - WH);
+  ctx.fillStyle = C.edge; ctx.fillRect(0, WH, VW, 2);
+  const r = 60, r1 = 388, r2 = 524;
+  rpmGauge(s, 95, r1, r); fuelGauge(s, 95, r2, r);
+  leverBar(204, 350, 22, 222, s.thr, 'THR'); flapIndicator(244, 350, s.flaps);
+  asi(s, 345, r1, r); attitude(s, 480, r1, r); altimeter(s, 615, r1, r);
+  turnCoord(s, 345, r2, r); gyro(s, 480, r2, r); vsi(s, 615, r2, r);
+  ilsDial(s, 780, r1, r);
+  const blink = Math.floor(performance.now() / 250) % 2 === 0;
+  lamp(870, 340, 74, 'STALL', s.stall && blink, C.orange);
+  lamp(870, 372, 74, 'FUEL', s.fuel < 15 && (s.fuel <= 0 || blink), C.red);
+  lamp(870, 404, 74, 'BRAKE', s.brake, C.orange);
+  lamp(870, 436, 74, s.ground ? 'ON GND' : 'IN AIR', true, s.ground ? C.blue : C.green);
+  const mm = Math.floor(s.t / 60), ss = Math.floor(s.t % 60);
+  txt('TIME  ' + String(mm).padStart(2, '0') + ':' + String(ss).padStart(2, '0'), 716, 478, 'left', 20, C.line);
+  const n = s.p[2] / 1000, e = s.p[0] / 1000;
+  txt('POS  ' + (n >= 0 ? 'N' : 'S') + Math.abs(n).toFixed(1) + ' ' + (e >= 0 ? 'E' : 'W') + Math.abs(e).toFixed(1) + ' km', 716, 502, 'left', 20, C.line);
+  const nv = navInfo(s);
+  txt('NAV  ' + nv.f.code + ' ' + String(Math.round(nv.brg / D2R) % 360 || 360).padStart(3, '0') + '° ' + (nv.dist / 1000).toFixed(1) + ' km', 716, 526, 'left', 20, C.violet);
+  txt('AOA  ' + (s.alpha / D2R).toFixed(1) + '°', 716, 550, 'left', 20, s.stall ? C.orange : C.line);
+  txt(s.touch ? 'TOUCHDOWN  ' + Math.round(s.touch.sink * FPM) + ' FPM' : 'TOUCHDOWN  --', 716, 574, 'left', 20, s.touch ? C.green : C.muted);
+}
+function drawOverlay(s) {
+  const x0 = view === 0 ? 84 : 16;
+  txt('VIEW ' + VIEWS[view], x0, 26, 'left', 20, C.muted);
+  ctx.save(); ctx.beginPath(); ctx.rect(0, 0, VW, WH); ctx.clip();
+  if (s.stall && !s.crashed && Math.floor(performance.now() / 250) % 2 === 0) txt('STALL', CX, 48, 'center', 34, C.orange);
+  if (s.fuel <= 0 && !s.crashed) txt('OUT OF FUEL', CX, 84, 'center', 28, C.red);
+  if (s.touch && s.t - s.touch.t < 4 && !s.crashed) txt('TOUCHDOWN  ' + Math.round(s.touch.sink * FPM) + ' FT/MIN', CX, 48, 'center', 28, C.green);
+  if (view !== 5 && s.t < 14 && s.ground && V3.len(s.v) < 3) txt('W throttle   ↓ pull up   V view   F flaps', CX, WH - 28, 'center', 22, C.muted);
+  if (paused) txt('PAUSED', CX, CY, 'center', 48, C.line);
+  if (s.crashed) {
+    ctx.fillStyle = 'rgba(7,9,12,.62)'; ctx.fillRect(0, 0, VW, WH);
+    txt('CRASH', CX, CY - 30, 'center', 64, C.red);
+    txt(s.msg, CX, CY + 18, 'center', 28, C.line);
+    txt('R restart on runway   H restart airborne', CX, CY + 54, 'center', 22, C.muted);
+  }
+  ctx.restore();
+}
+/* ---------- stato di gioco e input ---------- */
+let st = newState(false), paused = false, brakeToggle = false, soundOn = false;
+const keys = new Set(), pad = { active: false, x: 0, y: 0 };
+let rudBtn = 0, thrDrag = false;
+const $ = id => document.getElementById(id);
+const thrEl = $('thr'), padEl = $('pad'), knob = $('knob');
+const approach = (v, t, d) => v < t ? Math.min(t, v + d) : Math.max(t, v - d);
+
+function controls(dt) {
+  const s = st;
+  let ta = (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0);
+  let te = (keys.has('ArrowDown') ? 1 : 0) - (keys.has('ArrowUp') ? 1 : 0);
+  if (pad.active) { ta = pad.x; te = pad.y; }
+  const tr = (keys.has('KeyX') ? 1 : 0) - (keys.has('KeyZ') ? 1 : 0) + rudBtn;
+  s.ail = approach(s.ail, ta, (ta ? 3 : 5) * dt);
+  s.elev = approach(s.elev, te, (te ? 2.2 : 3.5) * dt);
+  s.rud = approach(s.rud, clamp(tr, -1, 1), (tr ? 3 : 5) * dt);
+  const dthr = (keys.has('KeyW') || keys.has('PageUp') ? 1 : 0) - (keys.has('KeyS') || keys.has('PageDown') ? 1 : 0);
+  if (dthr) s.thr = clamp(s.thr + dthr * 0.4 * dt, 0, 1);
+  s.brake = keys.has('KeyB') || brakeToggle;
+}
+
+function syncButtons() {
+  $('b-brk').setAttribute('aria-pressed', String(brakeToggle));
+  $('b-pause').setAttribute('aria-pressed', String(paused));
+  $('b-snd').setAttribute('aria-pressed', String(soundOn));
+  $('b-flp').textContent = 'Flaps ' + st.flaps * 10 + '°';
+  $('b-view').textContent = 'View: ' + VIEWS[view].toLowerCase();
+  $('b-nav').textContent = 'Field: ' + FIELDS[navIdx].code;
+  $('b-map').setAttribute('aria-pressed', String(view === 5));
+}
+function doReset(air) {
+  st = newState(air); trail.length = 0; paused = false; brakeToggle = false; towerZoom = 1; syncButtons();
+}
+function cycleFlaps() { st.flaps = (st.flaps + 1) % 4; syncButtons(); }
+function setView(v) { if (v !== 5) lastView = v; view = v; syncButtons(); }
+function cycleView() { setView((view + 1) % VIEWS.length); }
+function toggleMap() { setView(view === 5 ? lastView : 5); }
+function cycleField() { navIdx = (navIdx + 1) % FIELDS.length; syncButtons(); }
+function togglePause() { paused = !paused; syncButtons(); }
+function toggleSound() { soundOn = !soundOn; if (soundOn) audioInit(); syncButtons(); }
+
+const HANDLED = new Set(['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyZ', 'KeyX', 'KeyW', 'KeyS', 'KeyB', 'PageUp', 'PageDown']);
+addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.code;
+  if (HANDLED.has(k)) { keys.add(k); e.preventDefault(); return; }
+  if (e.repeat) return;
+  switch (k) {
+    case 'KeyF': cycleFlaps(); break;
+    case 'KeyV': cycleView(); break;
+    case 'KeyN': cycleField(); break;
+    case 'KeyP': togglePause(); break;
+    case 'KeyR': doReset(false); break;
+    case 'KeyH': doReset(true); break;
+    case 'KeyM': toggleMap(); break;
+    case 'KeyO': toggleSound(); break;
+    case 'Comma': mapRange = clamp(mapRange * 1.5, 2000, 100000); break;
+    case 'Period': mapRange = clamp(mapRange / 1.5, 2000, 100000); break;
+    default: return;
+  }
+  e.preventDefault();
+});
+addEventListener('keyup', e => keys.delete(e.code));
+addEventListener('blur', () => { keys.clear(); rudBtn = 0; });
+
+thrEl.addEventListener('input', () => { st.thr = thrEl.value / 100; });
+thrEl.addEventListener('pointerdown', () => { thrDrag = true; });
+addEventListener('pointerup', () => { thrDrag = false; });
+$('b-brk').addEventListener('click', () => { brakeToggle = !brakeToggle; syncButtons(); });
+$('b-flp').addEventListener('click', cycleFlaps);
+$('b-view').addEventListener('click', cycleView);
+$('b-nav').addEventListener('click', cycleField);
+$('b-map').addEventListener('click', toggleMap);
+$('b-pause').addEventListener('click', togglePause);
+$('b-air').addEventListener('click', () => doReset(true));
+$('b-reset').addEventListener('click', () => doReset(false));
+$('b-snd').addEventListener('click', toggleSound);
+for (const [id, v] of [['b-rl', -1], ['b-rr', 1]]) {
+  const b = $(id);
+  b.addEventListener('pointerdown', e => { rudBtn = v; b.setPointerCapture(e.pointerId); });
+  for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, () => { rudBtn = 0; });
+}
+function padMove(e) {
+  const r = padEl.getBoundingClientRect();
+  pad.x = clamp((e.clientX - r.left - r.width / 2) / (r.width / 2), -1, 1);
+  pad.y = clamp((e.clientY - r.top - r.height / 2) / (r.height / 2), -1, 1);
+  knob.style.transform = 'translate(' + pad.x * (r.width / 2 - 13) + 'px,' + pad.y * (r.height / 2 - 13) + 'px)';
+}
+padEl.addEventListener('pointerdown', e => { pad.active = true; padEl.setPointerCapture(e.pointerId); padMove(e); });
+padEl.addEventListener('pointermove', e => { if (pad.active) padMove(e); });
+for (const ev of ['pointerup', 'pointercancel']) padEl.addEventListener(ev, () => { pad.active = false; pad.x = pad.y = 0; knob.style.transform = ''; });
+
+/* ---------- audio (motore e avvisatore di stallo) ---------- */
+let au = null;
+function audioInit() {
+  try {
+    if (!au) {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      const c = new AC(); au = { c };
+      au.osc = c.createOscillator(); au.osc.type = 'sawtooth';
+      au.lp = c.createBiquadFilter(); au.lp.type = 'lowpass'; au.lp.frequency.value = 520;
+      au.g = c.createGain(); au.g.gain.value = 0;
+      au.osc.connect(au.lp); au.lp.connect(au.g); au.g.connect(c.destination); au.osc.start();
+      au.horn = c.createOscillator(); au.horn.type = 'square'; au.horn.frequency.value = 520;
+      au.hg = c.createGain(); au.hg.gain.value = 0; au.horn.connect(au.hg); au.hg.connect(c.destination); au.horn.start();
+    }
+    au.c.resume();
+  } catch (e) { au = null; }
+}
+function audioUpdate(s) {
+  if (!au) return;
+  try {
+    const on = soundOn && !paused && !s.crashed, t = au.c.currentTime;
+    au.osc.frequency.setTargetAtTime(Math.max(18, s.rpm / 30), t, 0.05);
+    au.g.gain.setTargetAtTime(on ? 0.04 + 0.06 * s.thr : 0, t, 0.08);
+    const horn = on && s.stall && Math.floor(performance.now() / 250) % 2 === 0;
+    au.hg.gain.setTargetAtTime(horn ? 0.03 : 0, t, 0.02);
+  } catch (e) { /* audio opzionale */ }
+}
+
+/* ---------- letture numeriche ---------- */
+let stripT = 0;
+function updateStrip(s) {
+  const V = V3.len(s.v) * KT;
+  $('r-ias').textContent = Math.round(V) + ' kt'; $('r-ias').className = s.stall ? 'warn' : '';
+  $('r-alt').textContent = Math.round((s.p[1] - EYE) * FT) + ' ft';
+  $('r-hdg').textContent = String(Math.round(heading(s) / D2R) % 360 || 360).padStart(3, '0') + '°';
+  $('r-vs').textContent = Math.round(s.vsi * FPM / 10) * 10 + ' fpm';
+  $('r-thr').textContent = Math.round(s.thr * 100) + ' %';
+  $('r-flp').textContent = s.flaps * 10 + '°';
+  $('r-fuel').textContent = Math.round(s.fuel) + ' %'; $('r-fuel').className = s.fuel < 15 ? 'warn' : '';
+}
+
+/* ---------- ciclo principale ---------- */
+const DT = 1 / 120;
+let last = performance.now(), acc = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (!paused && !st.crashed) {
+    acc += dt;
+    while (acc >= DT) { controls(DT); step(st, DT); acc -= DT; }
+    st.trailT += dt;
+    if (st.trailT > 0.5) { st.trailT = 0; trail.push([st.p[0], st.p[2]]); if (trail.length > 900) trail.shift(); }
+  }
+  if (!thrDrag) thrEl.value = Math.round(st.thr * 100);
+  ctx.fillStyle = C.ink; ctx.fillRect(0, 0, VW, VH);
+  if (view === 5) drawMap(st); else { drawWorld(st); drawPanel(st); }
+  drawOverlay(st);
+  audioUpdate(st);
+  stripT += dt; if (stripT > 0.12) { stripT = 0; updateStrip(st); }
+  requestAnimationFrame(frame);
+}
+fitCanvas(); addEventListener('resize', fitCanvas);
+try { document.fonts && document.fonts.load('20px VT323'); } catch (e) { /* font opzionale */ }
+syncButtons();
+requestAnimationFrame(frame);
+</script>
+
+</body></html>
