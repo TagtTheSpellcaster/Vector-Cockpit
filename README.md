@@ -2,6 +2,8 @@
 
 A wireframe flight simulator in a single HTML file, with a cockpit view and analog instruments, inspired by the early Sublogic flight simulators of the 1980s.
 
+[You can play it here](https://tagtthespellcaster.github.io/Vector-Cockpit/)
+
 ![HTML5](https://img.shields.io/badge/HTML5-single%20file-E34F26?logo=html5&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-F7DF1E?logo=javascript&logoColor=black)
 ![Canvas 2D](https://img.shields.io/badge/rendering-Canvas%202D-4DB8FF)
@@ -10,12 +12,6 @@ A wireframe flight simulator in a single HTML file, with a cockpit view and anal
 ![Runs in the browser](https://img.shields.io/badge/runs%20in-the%20browser-blue?logo=googlechrome&logoColor=white)
 ![Touch controls](https://img.shields.io/badge/touch-supported-A77BFF)
 ![World](https://img.shields.io/badge/world-60%20%C3%97%2060%20km-FF8A2B)
-
-<!-- Add these after the first push, replacing USER/REPO. A license badge goes here once you pick a license.
-![Last commit](https://img.shields.io/github/last-commit/USER/REPO)
-![Stars](https://img.shields.io/github/stars/USER/REPO?style=flat)
-![Repo size](https://img.shields.io/github/repo-size/USER/REPO)
--->
 
 There is no score and no mission. You take off, fly, and land. The only outcome the program records is a crash, with its cause.
 
