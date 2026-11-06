@@ -81,6 +81,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
         <button id="b-rr" type="button">Rudder ▶</button>
         <button id="b-brk" type="button" aria-pressed="false">Brakes</button>
         <button id="b-flp" type="button">Flaps</button>
+        <button id="b-fuel" type="button" aria-pressed="false">Refuel</button>
         <button id="b-view" type="button">View</button>
         <button id="b-map" type="button" aria-pressed="false">Map</button>
         <button id="b-nav" type="button">Field</button>
@@ -101,6 +102,7 @@ button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid
       <li><kbd>W S</kbd><span>Throttle up / down (also PageUp, PageDown)</span></li>
       <li><kbd>B</kbd><span>Brakes (hold)</span></li>
       <li><kbd>F</kbd><span>Flaps 0 / 10 / 20 / 30 degrees</span></li>
+      <li><kbd>G</kbd><span>Refuel: stopped on a field, throttle at idle (about 25 s for a full tank)</span></li>
       <li><kbd>V</kbd><span>View: front, left, right, rear, tower, map</span></li>
       <li><kbd>, .</kbd><span>Map zoom (at the widest scale the map shows the whole region)</span></li>
       <li><kbd>P</kbd><span>Pause</span></li>
@@ -221,6 +223,15 @@ function surfaceMu(x, z) {
     if (Math.abs(lx) < f.hw + 25 && Math.abs(lz) < f.hl + 30) return f.surf === 'paved' ? 0.025 : 0.06;
   }
   return 0.09;
+}
+// campo sotto l'aereo (pista o area immediatamente intorno), o null
+function fieldAt(x, z) {
+  for (const f of FIELDS) {
+    const dx = x - f.x, dz = z - f.z;
+    const lx = dx * f.right[0] + dz * f.right[1], lz = dx * f.fwd[0] + dz * f.fwd[1];
+    if (Math.abs(lx) < f.hw + 25 && Math.abs(lz) < f.hl + 30) return f;
+  }
+  return null;
 }
 // campo scelto: distanza e rotta (vera) dalla posizione dell'aereo
 function navInfo(s) {
@@ -441,7 +452,7 @@ function newState(air, fi = navIdx) {
   const s = {
     p: [th0[0] + fl.fwd[0] * 40, EYE, th0[1] + fl.fwd[1] * 40], v: [0, 0, 0], f: [0, 0, 1], r: [1, 0, 0], u: [0, 1, 0],
     thr: 0, elev: 0, ail: 0, rud: 0, flaps: 0, brake: false, fuel: 100, rpm: 700,
-    ground: true, crashed: false, msg: '', alpha: 0, stall: false, t: 0,
+    ground: true, crashed: false, msg: '', alpha: 0, stall: false, t: 0, refuel: false,
     hdgRate: 0, slip: 0, lastHdg: 0, vsi: 0, touch: null, trailT: 0
   };
   if (air) {
@@ -471,6 +482,11 @@ function step(s, dt) {
   if (s.crashed) return;
   s.t += dt;
   const V = V3.len(s.v), alt = s.p[1] - EYE, fl = s.flaps;
+  // rifornimento: solo fermo a terra su un campo, motore al minimo; 100% in circa 25 s
+  if (s.refuel) {
+    if (s.ground && V < 0.3 && s.thr < 0.03 && s.fuel < 100 && fieldAt(s.p[0], s.p[2])) { s.fuel = Math.min(100, s.fuel + 4 * dt); if (s.fuel >= 100) s.refuel = false; }
+    else s.refuel = false;
+  }
   const hasFuel = s.fuel > 0, thr = hasFuel ? s.thr : 0;
   if (hasFuel) s.fuel = Math.max(0, s.fuel - (0.012 + 0.04 * thr) * dt);
   const rpmT = hasFuel ? 700 + 2000 * thr : (V > 20 ? 450 : 0);
@@ -975,6 +991,8 @@ function drawOverlay(s) {
   if (s.stall && !s.crashed && Math.floor(performance.now() / 250) % 2 === 0) txt('STALL', CX, 48, 'center', 34, C.orange);
   if (s.fuel <= 0 && !s.crashed) txt('OUT OF FUEL', CX, 84, 'center', 28, C.red);
   if (s.touch && s.t - s.touch.t < 4 && !s.crashed) txt('TOUCHDOWN  ' + Math.round(s.touch.sink * FPM) + ' FT/MIN', CX, 48, 'center', 28, C.green);
+  if (s.refuel && !s.crashed) txt('REFUELING  ' + Math.round(s.fuel) + ' %', CX, 84, 'center', 28, C.green);
+  else if (view !== 5 && s.ground && V3.len(s.v) < 0.3 && s.thr < 0.03 && s.fuel < 99 && fieldAt(s.p[0], s.p[2]) && !s.crashed) txt('G refuel', CX, WH - 56, 'center', 22, C.green);
   if (view !== 5 && s.t < 14 && s.ground && V3.len(s.v) < 3) txt('W throttle   ↓ pull up   V view   F flaps', CX, WH - 28, 'center', 22, C.muted);
   if (paused) txt('PAUSED', CX, CY, 'center', 48, C.line);
   if (s.crashed) {
@@ -993,11 +1011,16 @@ const $ = id => document.getElementById(id);
 const thrEl = $('thr'), padEl = $('pad'), knob = $('knob');
 const approach = (v, t, d) => v < t ? Math.min(t, v + d) : Math.max(t, v - d);
 
+// risposta dello stick virtuale: zona morta del 4% e curva a potenza (esponente 2): a meta' corsa il comando e' ~23%, a fondo corsa 100%
+function padCurve(v) {
+  const m = Math.max(0, Math.abs(v) - 0.04) / 0.96;
+  return Math.sign(v) * m * m;
+}
 function controls(dt) {
   const s = st;
   let ta = (keys.has('ArrowRight') ? 1 : 0) - (keys.has('ArrowLeft') ? 1 : 0);
   let te = (keys.has('ArrowDown') ? 1 : 0) - (keys.has('ArrowUp') ? 1 : 0);
-  if (pad.active) { ta = pad.x; te = pad.y; }
+  if (pad.active) { ta = padCurve(pad.x); te = padCurve(pad.y); }
   const tr = (keys.has('KeyX') ? 1 : 0) - (keys.has('KeyZ') ? 1 : 0) + rudBtn;
   s.ail = approach(s.ail, ta, (ta ? 3 : 5) * dt);
   s.elev = approach(s.elev, te, (te ? 2.2 : 3.5) * dt);
@@ -1009,6 +1032,7 @@ function controls(dt) {
 
 function syncButtons() {
   $('b-brk').setAttribute('aria-pressed', String(brakeToggle));
+  $('b-fuel').setAttribute('aria-pressed', String(st.refuel));
   $('b-pause').setAttribute('aria-pressed', String(paused));
   $('b-snd').setAttribute('aria-pressed', String(soundOn));
   $('b-flp').textContent = 'Flaps ' + st.flaps * 10 + '°';
@@ -1018,6 +1042,12 @@ function syncButtons() {
 }
 function doReset(air) {
   st = newState(air); trail.length = 0; paused = false; brakeToggle = false; towerZoom = 1; syncButtons();
+}
+function toggleRefuel() {
+  const s = st;
+  if (s.refuel) s.refuel = false;
+  else if (!s.crashed && s.ground && V3.len(s.v) < 0.3 && s.thr < 0.03 && s.fuel < 100 && fieldAt(s.p[0], s.p[2])) s.refuel = true;
+  syncButtons();
 }
 function cycleFlaps() { st.flaps = (st.flaps + 1) % 4; syncButtons(); }
 function setView(v) { if (v !== 5) lastView = v; view = v; syncButtons(); }
@@ -1035,6 +1065,7 @@ addEventListener('keydown', e => {
   if (e.repeat) return;
   switch (k) {
     case 'KeyF': cycleFlaps(); break;
+    case 'KeyG': toggleRefuel(); break;
     case 'KeyV': cycleView(); break;
     case 'KeyN': cycleField(); break;
     case 'KeyP': togglePause(); break;
@@ -1056,6 +1087,7 @@ thrEl.addEventListener('pointerdown', () => { thrDrag = true; });
 addEventListener('pointerup', () => { thrDrag = false; });
 $('b-brk').addEventListener('click', () => { brakeToggle = !brakeToggle; syncButtons(); });
 $('b-flp').addEventListener('click', cycleFlaps);
+$('b-fuel').addEventListener('click', toggleRefuel);
 $('b-view').addEventListener('click', cycleView);
 $('b-nav').addEventListener('click', cycleField);
 $('b-map').addEventListener('click', toggleMap);
@@ -1068,11 +1100,14 @@ for (const [id, v] of [['b-rl', -1], ['b-rr', 1]]) {
   b.addEventListener('pointerdown', e => { rudBtn = v; b.setPointerCapture(e.pointerId); });
   for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, () => { rudBtn = 0; });
 }
+// curva esponenziale (come l'expo dei radiocomandi): 0.3 lineare + 0.7 cubica; 20% di corsa -> 6.6%, 50% -> 24%, 100% -> 100%
+const expo = v => 0.3 * v + 0.7 * v * v * v;
 function padMove(e) {
   const r = padEl.getBoundingClientRect();
-  pad.x = clamp((e.clientX - r.left - r.width / 2) / (r.width / 2), -1, 1);
-  pad.y = clamp((e.clientY - r.top - r.height / 2) / (r.height / 2), -1, 1);
-  knob.style.transform = 'translate(' + pad.x * (r.width / 2 - 13) + 'px,' + pad.y * (r.height / 2 - 13) + 'px)';
+  const nx = clamp((e.clientX - r.left - r.width / 2) / (r.width / 2), -1, 1);
+  const ny = clamp((e.clientY - r.top - r.height / 2) / (r.height / 2), -1, 1);
+  pad.x = expo(nx); pad.y = expo(ny);              // risposta non lineare: fine al centro, piena a fondo corsa
+  knob.style.transform = 'translate(' + nx * (r.width / 2 - 13) + 'px,' + ny * (r.height / 2 - 13) + 'px)';
 }
 padEl.addEventListener('pointerdown', e => { pad.active = true; padEl.setPointerCapture(e.pointerId); padMove(e); });
 padEl.addEventListener('pointermove', e => { if (pad.active) padMove(e); });
@@ -1116,6 +1151,7 @@ function updateStrip(s) {
   $('r-vs').textContent = Math.round(s.vsi * FPM / 10) * 10 + ' fpm';
   $('r-thr').textContent = Math.round(s.thr * 100) + ' %';
   $('r-flp').textContent = s.flaps * 10 + '°';
+  if (!s.refuel && $('b-fuel').getAttribute('aria-pressed') === 'true') syncButtons();
   $('r-fuel').textContent = Math.round(s.fuel) + ' %'; $('r-fuel').className = s.fuel < 15 ? 'warn' : '';
 }
 

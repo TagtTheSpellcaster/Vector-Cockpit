@@ -6,11 +6,16 @@ A wireframe flight simulator in a single HTML file, with a cockpit view and anal
 ![JavaScript](https://img.shields.io/badge/JavaScript-vanilla-F7DF1E?logo=javascript&logoColor=black)
 ![Canvas 2D](https://img.shields.io/badge/rendering-Canvas%202D-4DB8FF)
 ![Dependencies](https://img.shields.io/badge/dependencies-none-46F07A)
+![Build step](https://img.shields.io/badge/build%20step-none-lightgrey)
 ![Runs in the browser](https://img.shields.io/badge/runs%20in-the%20browser-blue?logo=googlechrome&logoColor=white)
 ![Touch controls](https://img.shields.io/badge/touch-supported-A77BFF)
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+![World](https://img.shields.io/badge/world-60%20%C3%97%2060%20km-FF8A2B)
 
-Playable here: [Vector Cockpit](https://tagtthespellcaster.github.io/Vector-Cockpit/)
+<!-- Add these after the first push, replacing USER/REPO. A license badge goes here once you pick a license.
+![Last commit](https://img.shields.io/github/last-commit/USER/REPO)
+![Stars](https://img.shields.io/github/stars/USER/REPO?style=flat)
+![Repo size](https://img.shields.io/github/repo-size/USER/REPO)
+-->
 
 There is no score and no mission. You take off, fly, and land. The only outcome the program records is a crash, with its cause.
 
@@ -80,7 +85,7 @@ python3 -m http.server 8000
 | `H` | Restart airborne at 1500 ft over the selected field |
 | `O` | Sound on / off |
 
-**Touch and mouse.** Drag in the *Stick* square: horizontal is roll, vertical is pitch (down pulls up, as with the keyboard). Release to centre it. Use the *Throttle* slider and the buttons for rudder (hold), brakes (toggle), flaps, refuel, view, map, field, pause, airborne start, restart and sound.
+**Touch and mouse.** Drag in the *Stick* square: horizontal is roll, vertical is pitch (down pulls up, as with the keyboard). The response is non-linear, like the expo setting of an RC transmitter: small movements near the centre have a small effect (20% of the travel gives about 7% deflection, 50% gives about 24%) and full deflection is reached only at the edge of the square. Release to centre it. Use the *Throttle* slider and the buttons for rudder (hold), brakes (toggle), flaps, refuel, view, map, field, pause, airborne start, restart and sound.
 
 ## How the aircraft behaves
 
